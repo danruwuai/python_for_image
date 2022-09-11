@@ -1,0 +1,6 @@
+*.bmp
+*.packed_word
+*.raw
+.idea/
+__pycache__/
+.vscode/
