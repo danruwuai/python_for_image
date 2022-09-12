@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 import raw_image_show as rawshow
-import do_obc as doobc
+import do_pure_raw
 import numpy as np
 
 
@@ -32,7 +32,7 @@ def test_case_read_unpack():
     image = read_unpack_file(file_name, 2612, 4640, 12)
     #    image = read_mipi10_file(file_name, 3024, 4032)
     #    image = image / 255.0
-    image = doobc.do_black_level_correction(image, 12)
+    image = do_pure_raw.do_black_level_correction(image, 12)
     image = image / 4095.0
 
     #    rawshow.raw_image_show_thumbnail(image, 3024, 4032)

@@ -1,11 +1,9 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
 
-import raw_image_show as rawshow
 import numpy as np
 import math
 import os
-from matplotlib import pyplot as plt
 
 
 # 读取packed_word信息，返回数据和raw_name,准确的width
@@ -81,20 +79,6 @@ def read_packed_word(file_path_name, height, width, bayer):
                         new_width_real = i
                         print("new_width_real = ", new_width_real)
         frame_out = frame_out[:, 0:new_width_real]  # 裁剪无用数据
-        if new_width_real == width * 1.5:
-            """
-            frame_yuv = np.zeros(shape=(height, width))
-            frame_yuv[:, 0:width:4] = frame_out[:, 0:new_width_real:6]
-            frame_yuv[:, 1:width:4] = frame_out[:, 2:new_width_real:6]
-            frame_yuv[:, 2:width:4] = frame_out[:, 3:new_width_real:6]
-            frame_yuv[:, 3:width:4] = frame_out[:, 5:new_width_real:6]
-            frame_out = frame_yuv
-            frame_out = frame_out[:, 0:width]
-            new_width_real = width
-            
-            rgb_img = read_yuv_packed_word(frame_out, height, width)
-            return rgb_img, raw_name, width
-            """
         raw_name = raw_name.replace(f'_{width}x', f'_{new_width_real}x')  # 更换实际的width
         print("raw_name = ", raw_name)
         width = new_width_real
@@ -167,56 +151,4 @@ def get_width_real(file_path_name, height, width):
         width_real = packet_num_L * 4
         width_flag = 1
         return width_real, width_real, width_byte_real, packet_num_L, width_flag
-"""
-def read_yuv_packed_word(frame_data, height, width):
-    width_size = width * 3 // 2  # 一行的数据数
-    h_w = width // 4  # 一行颜色数据数
-    # frame_yuv = np.zeros(shape=(height, width_size))
-    frame_yuv = frame_data // 4
-    frame_yuv = frame_yuv.reshape(height, width_size)
 
-    Yt = np.zeros(shape=(height, width))
-    Cb = np.zeros(shape=(height, h_w))
-    Cr = np.zeros(shape=(height, h_w))
-    #frame_yuv = frame_yuv.astype('uint16')
-    Yt[:, 0:width:4] = frame_yuv[:, 0:width_size:6]
-    Yt[:, 1:width:4] = frame_yuv[:, 2:width_size:6]
-    Yt[:, 2:width:4] = frame_yuv[:, 3:width_size:6]
-    Yt[:, 3:width:4] = frame_yuv[:, 5:width_size:6]
-    Cr[:, :] = frame_yuv[:, 1:width_size:6]
-    Cb[:, :] = frame_yuv[:, 4:width_size:6]
-
-    Cb = Cb.repeat(4, 1)
-    Cr = Cr.repeat(4, 1)
-
-    img_yuv = np.zeros(shape=(height, width, 3))
-    img_yuv[:, :, 0] = Yt[:, :]
-    img_yuv[:, :, 1] = Cb[:, :]
-    img_yuv[:, :, 2] = Cr[:, :]
-
-    rgb_img = np.zeros(shape=(height, width, 3))
-    rgb_img[:, :, 0] = 1.164 * (img_yuv[:, :, 0] - 16 * 4) + 1.596 * (img_yuv[:, :, 2] - 128 * 4)  # R=Y+1.402*(Cr-128)
-    # G = Y -0.344136*(Cr-128)-0.714136*(Cb-128)
-    rgb_img[:, :, 1] =1.164 * (img_yuv[:, :, 0] - 16 * 4) - 0.392 * (img_yuv[:, :, 1] - 128 * 4) -0.813 * (img_yuv[:, :, 2] - 128 * 4)
-    rgb_img[:, :, 2] =1.164 * (img_yuv[:, :, 0] - 16 * 4) + 2.017 * (img_yuv[:, :, 1] - 128 * 4)  # B=Y+1.772*(Cb - 128)
-    rgb_img = np.clip(rgb_img, 0, 1023)
-    rgb_img = rgb_img * 4
-    return rgb_img
-"""
-
-def test_case_read_packed_word():
-
-    file_name = "101907391-0060-0060-main-P1-IMGO-PW4672-PH2612-BW5840__4640x2612_10_2.packed_word"
-    image, raw_name, width = read_packed_word(file_name, 2612, 4640, 2)
-    image = image / 4095.0
-    plt.figure(num='test', figsize=(4640, 2612))
-    plt.imshow(image, interpolation='bicubic', vmax=1.0)
-    plt.xticks([]), plt.yticks([])
-    plt.show()
-    print('show')
-
-
-
-if __name__ == "__main__":
-    print('This is main of module')
-    test_case_read_packed_word()
