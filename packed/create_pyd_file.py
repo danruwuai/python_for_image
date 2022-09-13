@@ -22,7 +22,8 @@ def func(path):
     os.system('python setup.py build_ext --inplace')
     filename = file_path.split('.py')[0]
     # 删除原有的pyd文件
-    os.remove('%s.pyd' % filename)
+    if os.path.exists(filename+'.pyd'):
+        os.remove('%s.pyd' % filename)
     time.sleep(2)
     # 这里的cp37-win_amd64需要注意一下，这个是依据python解释器类型以及windows版本生成的，建议是单个生成一个pyd文件然后相应修改一下
     os.rename('%s\\%s.cp39-win_amd64.pyd' % (folder_path, filename), '%s\\%s.pyd' % (folder_path, filename))

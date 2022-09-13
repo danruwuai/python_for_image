@@ -7,3 +7,5 @@ __pycache__/
 packed/dist/
 packed/build/
 packed/*.pyd
+*.aao
+*.hw_aao
