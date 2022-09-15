@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
 
-from xml.sax.handler import DTDHandler
 import raw_image_show as rawshow
 import numpy as np
 import math
@@ -12,9 +11,10 @@ from matplotlib import pyplot as plt
 
 # 读取packed_word信息，返回数据和raw_name,准确的width
 def read_packed_word(file_path_name, height, width, bayer, bit):
+    yuv_flag = 0
     if bit == 12:
-        frame_out= read_packed_word_12(file_path_name, height, width)
-    else :
+        frame_out = read_packed_word_12(file_path_name, height, width)
+    else:
         # 调用函数获取实际width
         new_width, width_real, width_byte_num, packet_num_L, width_flag = get_width_real(file_path_name, height, width)
         print("width_flag:", width_flag)
@@ -87,19 +87,34 @@ def read_packed_word(file_path_name, height, width, bayer, bit):
                             print("new_width_real = ", new_width_real)
             frame_out = frame_out[:, 0:new_width_real]  # 裁剪无用数据
             if new_width_real == width * 1.5:
-                """
-                frame_yuv = np.zeros(shape=(height, width))
-                frame_yuv[:, 0:width:4] = frame_out[:, 0:new_width_real:6]
-                frame_yuv[:, 1:width:4] = frame_out[:, 2:new_width_real:6]
-                frame_yuv[:, 2:width:4] = frame_out[:, 3:new_width_real:6]
-                frame_yuv[:, 3:width:4] = frame_out[:, 5:new_width_real:6]
-                frame_out = frame_yuv
-                frame_out = frame_out[:, 0:width]
-                new_width_real = width
 
-                rgb_img = read_yuv_packed_word(frame_out, height, width)
-                return rgb_img, raw_name, width
+                frame_y = np.zeros(shape=(height, width))
+                uv_width = width // 4
+                frame_cb = np.zeros(shape=(height, uv_width))
+                frame_cr = np.zeros(shape=(height, uv_width))
+                frame_y[:, 0:width:4] = frame_out[:, 0:new_width_real:6]
+                frame_y[:, 1:width:4] = frame_out[:, 2:new_width_real:6]
+                frame_y[:, 2:width:4] = frame_out[:, 3:new_width_real:6]
+                frame_y[:, 3:width:4] = frame_out[:, 5:new_width_real:6]
+                yuv_flag = 1
                 """
+                frame_cb[:, :] = frame_out[:, 1:new_width_real:6]
+                frame_cr[:, :] = frame_out[:, 4:new_width_real:6]
+                Cb = frame_cb.repeat(4, 1)
+                Cr = frame_cr.repeat(4, 1)
+                raw_cb = Cb / 16
+                raw_cb = raw_cb.astype(np.uint8)
+                cv.imwrite(raw_name + '.bmp', cv.cvtColor(raw_cb, cv.COLOR_RGBA2BGRA))
+                raw_name = raw_name.replace('_12_', '_8_')
+                frame_ycbcr = do_ycbcr(frame_y, Cb, Cr, height, width, raw_name)
+                # frame_out = frame_yuv
+                # frame_out = frame_out[:, 0:width]
+                # new_width_real = width
+
+                # rgb_img = read_yuv_packed_word(frame_out, height, width)
+                """
+                return frame_y, raw_name, width, yuv_flag
+
             raw_name = raw_name.replace(f'_{width}x', f'_{new_width_real}x')  # 更换实际的width
             print("raw_name = ", raw_name)
             width = new_width_real
@@ -146,7 +161,7 @@ def read_packed_word(file_path_name, height, width, bayer, bit):
     else:
         print("no match bayer")
         return
-    return rgb_img, raw_name, width
+    return rgb_img, raw_name, width, yuv_flag
 
 
 # 读取lsc_raw信息，返回数据和raw_name
@@ -156,7 +171,7 @@ def read_lsc_raw(file_path_name, height, width, bayer):
     frame = np.fromfile(file_path_name, count=image_bytes, dtype="uint32")
     print("b shape", frame.shape)
     print('%#x' % frame[0])
-    frame.shape = [height,width]  # 高字节整理图像矩阵
+    frame.shape = [height, width]  # 高字节整理图像矩阵
     frame = frame.astype('uint16')
     # 替换16 bit为12 bit
     raw_name = file_path_name[:-4]
@@ -207,6 +222,7 @@ def read_lsc_raw(file_path_name, height, width, bayer):
         return
     return rgb_img, raw_name
 
+
 # get_width_real获取数据，同时输出可能的width_real
 def get_width_real(file_path_name, height, width):
     # 获取文件大小
@@ -231,12 +247,13 @@ def get_width_real(file_path_name, height, width):
         width_flag = 1
         return width_real, width_real, width_byte_real, packet_num_L, width_flag
 
+
 # 读取packed_word_yplane信息，返回数据和raw_name,准确的width
 def read_packed_word_yplane(file_path_name, height, width, bit):
     if bit == 12:
-        frame_out= read_packed_word_12(file_path_name, height, width)
+        frame_out = read_packed_word_12(file_path_name, height, width)
         raw_name = file_path_name[:-12]
-    else :
+    else:
         # 调用函数获取实际width
         new_width, width_real, width_byte_num, packet_num_L, width_flag = get_width_real(file_path_name, height, width)
         print("width_flag:", width_flag)
@@ -317,9 +334,9 @@ def read_packed_word_yplane(file_path_name, height, width, bit):
 # 读取packed_word_cplane信息，返回数据和raw_name,准确的width
 def read_packed_word_cplane(file_path_name, height, width, bit):
     if bit == 12:
-        frame_out= read_packed_word_12(file_path_name, height, width)
+        frame_out = read_packed_word_12(file_path_name, height, width)
         raw_name = file_path_name[:-12]
-    else :
+    else:
         # 调用函数获取实际width
         new_width, width_real, width_byte_num, packet_num_L, width_flag = get_width_real(file_path_name, height, width)
         print("width_flag:", width_flag)
@@ -394,9 +411,9 @@ def read_packed_word_cplane(file_path_name, height, width, bit):
             raw_name = raw_name.replace(f'_{width}x', f'_{new_width_real}x')  # 更换实际的width
             print("raw_name = ", raw_name)
             width = new_width_real
-    Cb = frame_out[:,0:width: 2]
-    Cr = frame_out[:,1:width: 2]
-    # 扩展到（height，width)
+    Cb = frame_out[:, 0:width: 2]
+    Cr = frame_out[:, 1:width: 2]
+    # 扩展到(height，width)
     Cb = Cb.repeat(2, 0)
     Cr = Cr.repeat(2, 0)
     Cb = Cb.repeat(2, 1)
@@ -422,8 +439,8 @@ def do_ycbcr(frame_y, frame_cb, frame_cr, height, width, yuv_name):
     U V U V
     """
     yuv_nv21[0:height, :] = frame_y[:, :]
-    yuv_nv21[height:yuv_height, 0: width: 2] = frame_cr[0: height: 2, 0: width : 2]
-    yuv_nv21[height:yuv_height, 1: width: 2] = frame_cb[0: height: 2, 0: width : 2]
+    yuv_nv21[height:yuv_height, 0: width: 2] = frame_cr[0: height: 2, 0: width: 2]
+    yuv_nv21[height:yuv_height, 1: width: 2] = frame_cb[0: height: 2, 0: width: 2]
     
     # 写入YUV文件
     yuv_nv21 = yuv_nv21 / 16
@@ -434,10 +451,10 @@ def do_ycbcr(frame_y, frame_cb, frame_cr, height, width, yuv_name):
     img_yuv = img_yuv / 16.0
     rgb_img = np.zeros(shape=(height, width, 3))
     # YUV 转 RGB
-    rgb_img[:, :, 0] = cv.add(img_yuv[:, :, 0], 1.402 * (img_yuv[:, :, 2] - 128 )) # R=Y+1.402*(Cr-128)
+    rgb_img[:, :, 0] = cv.add(img_yuv[:, :, 0], 1.402 * (img_yuv[:, :, 2] - 128))  # R=Y+1.402*(Cr-128)
     # G = Y -0.344136*(Cr-128)-0.714136*(Cb-128)
-    rgb_img[:, :, 1] =cv.add(img_yuv[:, :, 0] , - 0.34413 * (img_yuv[:, :, 1] - 128 ), -0.71414 * (img_yuv[:, :, 2] - 128))
-    rgb_img[:, :, 2] =cv.add(img_yuv[:, :, 0], 1.772 * (img_yuv[:, :, 1] - 128 )) # B=Y+1.772*(Cb - 128)
+    rgb_img[:, :, 1] = cv.add(img_yuv[:, :, 0], - 0.34413 * (img_yuv[:, :, 1] - 128), -0.71414 * (img_yuv[:, :, 2] - 128))
+    rgb_img[:, :, 2] = cv.add(img_yuv[:, :, 0], 1.772 * (img_yuv[:, :, 1] - 128))  # B=Y+1.772*(Cb - 128)
     # 换算到0~255
     rgb_img = np.clip(rgb_img, 0, 255)
     return rgb_img
@@ -450,7 +467,7 @@ def read_packed_word_12(file_path_name, height, width):
         # 获取文件大小
         file_num = os.path.getsize(file_path_name)
         print("file_num: ", file_num)
-        if file_num == image_bytes :
+        if file_num == image_bytes:
             frame_12 = np.fromfile(file_path_name, count=image_bytes, dtype="uint8")
             print("b shape", frame_12.shape)
             print('%#x' % frame_12[0])
@@ -474,9 +491,8 @@ def read_packed_word_12(file_path_name, height, width):
             # 裁剪无用的数据
             frame_out = frame_pixels[0:height, :]
             return frame_out
-        else :
+        else:
             return False
-            
 
 
 """
@@ -506,15 +522,11 @@ def read_yuv_packed_word(frame_data, height, width):
     img_yuv[:, :, 1] = Cb[:, :]
     img_yuv[:, :, 2] = Cr[:, :]
 
-    rgb_img = np.zeros(shape=(height, width, 3))
-    rgb_img[:, :, 0] = 1.164 * (img_yuv[:, :, 0] - 16 * 4) + 1.596 * (img_yuv[:, :, 2] - 128 * 4)  # R=Y+1.402*(Cr-128)
-    # G = Y -0.344136*(Cr-128)-0.714136*(Cb-128)
-    rgb_img[:, :, 1] =1.164 * (img_yuv[:, :, 0] - 16 * 4) - 0.392 * (img_yuv[:, :, 1] - 128 * 4) -0.813 * (img_yuv[:, :, 2] - 128 * 4)
-    rgb_img[:, :, 2] =1.164 * (img_yuv[:, :, 0] - 16 * 4) + 2.017 * (img_yuv[:, :, 1] - 128 * 4)  # B=Y+1.772*(Cb - 128)
-    rgb_img = np.clip(rgb_img, 0, 1023)
-    rgb_img = rgb_img * 4
-    return rgb_img
-"""
+    rgb_img = np.zeros(shape=(height, width, 3)) rgb_img[:, :, 0] = 1.164 * (img_yuv[:, :, 0] - 16 * 4) + 1.596 * (
+    img_yuv[:, :, 2] - 128 * 4)  # R=Y+1.402*(Cr-128) # G = Y -0.344136*(Cr-128)-0.714136*(Cb-128) rgb_img[:, :, 
+    1] =1.164 * (img_yuv[:, :, 0] - 16 * 4) - 0.392 * (img_yuv[:, :, 1] - 128 * 4) -0.813 * (img_yuv[:, :, 
+    2] - 128 * 4) rgb_img[:, :, 2] =1.164 * (img_yuv[:, :, 0] - 16 * 4) + 2.017 * (img_yuv[:, :, 1] - 128 * 4)  # 
+    B=Y+1.772*(Cb - 128) rgb_img = np.clip(rgb_img, 0, 1023) rgb_img = rgb_img * 4 return rgb_img """
 """
 def test_case_read_packed_word():
 

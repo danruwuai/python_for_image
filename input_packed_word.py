@@ -1,12 +1,12 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
 
-from struct import pack
 import numpy as np
 import os
 import sys
 import cv2 as cv
 import read_packed_word as readpackedword
+
 
 # 获取packed_word文件列表
 def get_packed_word_file(dir_path):
@@ -39,7 +39,7 @@ def get_lsc_raw_file(dir_path):
         # 获取完整路径
         # file_list.extend(os.path.join(root, file) for file in files if file.endswith("packed_word"))
         # 获取文件名
-        file_list_lsc.extend(os.path.join("", file) for file in files if (file.endswith(".raw") and "_LSC_" in file and "_16_" in file ))
+        file_list_lsc.extend(os.path.join("", file) for file in files if (file.endswith(".raw") and "_LSC_" in file and "_16_" in file))
 
     return file_list_lsc
 
@@ -73,13 +73,18 @@ def input_pack_word():
         print("bayer:", packed_bayer)
         print("bit:", packed_bit)
         # 读取packed_word,raw_name
-        frame_raw, raw_name, width = readpackedword.read_packed_word(file_packed_word, packed_height, packed_width,
+        frame_raw, raw_name, width, yuv_flag = readpackedword.read_packed_word(file_packed_word, packed_height, packed_width,
                                                                      packed_bayer, packed_bit)
-        frame_raw = frame_raw / 16
-        # cv.imwrite(f'{raw_name}bmp', frame_raw)
-        # imwrite默认输出的是BGR图片，所以需要RGB转换未BGR再输出。
-        frame_raw = frame_raw.astype(np.uint8)
-        cv.imwrite(raw_name + '.bmp', cv.cvtColor(frame_raw, cv.COLOR_RGBA2BGRA))
+        if yuv_flag == 1:
+            frame_raw = frame_raw / 16
+            frame_raw = frame_raw.astype(np.uint8)
+            cv.imwrite(raw_name + '_yuv.bmp', cv.cvtColor(frame_raw, cv.COLOR_RGBA2BGRA))
+        else:
+            frame_raw = frame_raw / 16
+            # cv.imwrite(f'{raw_name}bmp', frame_raw)
+            # imwrite默认输出的是BGR图片，所以需要RGB转换未BGR再输出。
+            frame_raw = frame_raw.astype(np.uint8)
+            cv.imwrite(raw_name + '.bmp', cv.cvtColor(frame_raw, cv.COLOR_RGBA2BGRA))
         print("################################################################")
 
 
@@ -173,7 +178,7 @@ def input_pack_word_s0():
             frame_ycbcr = frame_ycbcr.astype(np.uint8)
             yuv_name = frame_yplane_name.replace('_12_', '_8_')
             cv.imwrite(yuv_name + '_yuv.bmp', cv.cvtColor(frame_ycbcr, cv.COLOR_RGBA2BGRA))
-        else :  # 如果不存在cplane的packed_word,直接显示灰度图
+        else:  # 如果不存在cplane的packed_word,直接显示灰度图
             frame_yplane = frame_yplane / 16
             # cv.imwrite(f'{raw_name}bmp', frame_raw)
             # imwrite默认输出的是BGR图片，所以需要RGB转换未BGR再输出。
