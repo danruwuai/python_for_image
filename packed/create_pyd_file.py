@@ -39,10 +39,9 @@ def func(path):
 def get_all_file(path):
     for root, dirs, files in os.walk(path):
         for name in files:
-            if name.startswith("create_pyd_file") == 0 | name.startswith("main") == 0:
-                if name.endswith(".py"):
-                    file_path = os.path.join(root, name)
-                    func(file_path)
+            if name.startswith("create_pyd_file") == 0 | name.startswith("main") == 0 and name.endswith(".py"):
+                file_path = os.path.join(root, name)
+                func(file_path)
 
 # 获取输入的第一个字符串
 #paths = sys.argv[1]

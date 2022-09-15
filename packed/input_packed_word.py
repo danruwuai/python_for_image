@@ -47,7 +47,7 @@ def input_pack_word():
         # 读取packed_word,raw_name
         frame_raw, raw_name, width = readpackedword.read_packed_word(file_packed_word, packed_height, packed_width,
                                                                      packed_bayer)
-        frame_raw = frame_raw / 16
+        frame_raw = frame_raw / 4095.0
         # cv.imwrite(f'{raw_name}bmp', frame_raw)
         # imwrite默认输出的是BGR图片，所以需要RGB转换未BGR再输出。
         frame_raw = frame_raw.astype(np.uint8)

@@ -9,3 +9,4 @@ packed/build/
 packed/*.pyd
 *.aao
 *.hw_aao
+*.nv21

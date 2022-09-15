@@ -9,7 +9,7 @@ import math
 def read_mipi10_file(file_path_name, height, width):
     # 当行长度补齐
     new_width = int(math.floor((width + 3) / 4) * 4)  # 对四字节补齐
-    packet_num_L = int(new_width / 4)
+    packet_num_L = new_width // 4
     width_byte_num = packet_num_L * 5  # 当行byte长度
     width_byte_num = int(math.floor((width_byte_num + 7) / 8) * 8)  # 当行对8字节补齐
     image_bytes = width_byte_num * height
@@ -60,9 +60,7 @@ def read_mipi10_file(file_path_name, height, width):
     frame_pixels[:, 1: new_width:4] = two_byte[:, 0: packet_num_L]
     frame_pixels[:, 2: new_width:4] = three_byte[:, 0: packet_num_L]
     frame_pixels[:, 3: new_width:4] = four_byte[:, 0: packet_num_L]
-    # 裁剪无用的数据
-    frame_out = frame_pixels[:, 0:width]
-    return frame_out
+    return frame_pixels[:, 0:width]
 
 
 def test_case_read_mipi_10():
