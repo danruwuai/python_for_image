@@ -180,19 +180,3 @@ def do_aao(frame_data, height, width, current_height, name, flag):
         cv.imwrite(name + '_high.bmp', cv.cvtColor(frame_pixels, cv.COLOR_RGBA2BGRA), [int(cv.IMWRITE_JPEG_QUALITY), 100])
         print("输出18bit的aao图片：", name + '_high.bmp')
 
-
-
-if __name__ == "__main__":
-    # 添加输入信息
-    if len(sys.argv) > 1:
-        flag = sys.argv[1]
-        if flag == "Zhong":
-            print("________________________________________________________________")
-            print("Design by Zhongguojun")
-            print("Creation time:2022/09/10")
-            print("________________________________________________________________")
-        else:
-            flag = int(flag)
-    else:
-        flag = 0
-    load_aao(flag)

@@ -4,10 +4,13 @@
 .idea/
 __pycache__/
 .vscode/
-packed/dist/
-packed/build/
-packed/*.pyd
+*/dist
+*/build
+*.pyd
 *.aao
 *.hw_aao
 *.nv21
 *.csv
+*.pyc
+packed/*/build
+packed/*/dist
