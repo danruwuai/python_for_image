@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
 
+from hashlib import new
 import raw_image_show as rawshow
 import numpy as np
 import math
@@ -14,6 +15,8 @@ def read_packed_word(file_path_name, height, width, bayer, bit):
     yuv_flag = 0
     if bit == 12:
         frame_out = read_packed_word_12(file_path_name, height, width)
+        if frame_out is False:
+            return False, False, False, False
     else:
         # 调用函数获取实际width
         new_width, width_real, width_byte_num, packet_num_L, width_flag = get_width_real(file_path_name, height, width)
@@ -160,7 +163,7 @@ def read_packed_word(file_path_name, height, width, bayer, bit):
         R[1::2, 1::2] = frame_out[1::2, 1::2]
     else:
         print("no match bayer")
-        return
+        return frame_out, raw_name, width, yuv_flag
     return rgb_img, raw_name, width, yuv_flag
 
 
@@ -219,7 +222,7 @@ def read_lsc_raw(file_path_name, height, width, bayer):
         R[1::2, 1::2] = frame[1::2, 1::2]
     else:
         print("no match bayer")
-        return
+        return frame, raw_name
     return rgb_img, raw_name
 
 
@@ -249,10 +252,12 @@ def get_width_real(file_path_name, height, width):
 
 
 # 读取packed_word_yplane信息，返回数据和raw_name,准确的width
-def read_packed_word_yplane(file_path_name, height, width, bit):
+def read_packed_word_yplane(file_path_name, height, width, bit, ph_height, pw_width, bw_width):
     if bit == 12:
-        frame_out = read_packed_word_12(file_path_name, height, width)
+        frame_out = read_packed_word_12(file_path_name, height, width, ph_height, pw_width, bw_width)
         raw_name = file_path_name[:-12]
+        if frame_out is False:
+            return False, False, False
     else:
         # 调用函数获取实际width
         new_width, width_real, width_byte_num, packet_num_L, width_flag = get_width_real(file_path_name, height, width)
@@ -332,10 +337,12 @@ def read_packed_word_yplane(file_path_name, height, width, bit):
 
 
 # 读取packed_word_cplane信息，返回数据和raw_name,准确的width
-def read_packed_word_cplane(file_path_name, height, width, bit):
+def read_packed_word_cplane(file_path_name, height, width, bit, ph_height, pw_width, bw_width):
     if bit == 12:
-        frame_out = read_packed_word_12(file_path_name, height, width)
+        frame_out = read_packed_word_12(file_path_name, height, width, ph_height, pw_width, bw_width)
         raw_name = file_path_name[:-12]
+        if frame_out is False:
+            return False, False, False, False
     else:
         # 调用函数获取实际width
         new_width, width_real, width_byte_num, packet_num_L, width_flag = get_width_real(file_path_name, height, width)
@@ -460,7 +467,32 @@ def do_ycbcr(frame_y, frame_cb, frame_cr, height, width, yuv_name):
     return rgb_img
 
 
-def read_packed_word_12(file_path_name, height, width):
+def read_packed_word_12(file_path_name, height, width, ph_height, pw_width, bw_width):
+    if ph_height and pw_width and bw_width:
+        image_bytes = bw_width * ph_height
+        frame_12 = np.fromfile(file_path_name, count=image_bytes, dtype="uint8")
+        print("b shape", frame_12.shape)
+        print('%#x' % frame_12[0])
+        frame_12.shape = [ph_height, bw_width]  # 高字节整理图像矩阵
+        # 5字节读取数据
+        one_byte = frame_12[:, 0:bw_width:3]
+        two_byte = frame_12[:, 1:bw_width:3]
+        three_byte = frame_12[:, 2:bw_width:3]
+        # 数据转换防止溢出
+        one_byte = one_byte.astype('uint16')
+        two_byte = two_byte.astype('uint16')
+        three_byte = three_byte.astype('uint16')
+        # 用矩阵的方法进行像素的拼接
+        one_byte = np.left_shift(np.bitwise_and(two_byte, 15), 8) + one_byte
+        two_byte = np.right_shift(np.bitwise_and(two_byte, 240), 4) + np.left_shift(three_byte, 4)
+        # 整合各通道数据到一起
+        frame_pixels = np.zeros(shape=(ph_height, pw_width))
+        frame_pixels[:, 0:pw_width:2] = one_byte[:, :]
+        frame_pixels[:, 1:pw_width:2] = two_byte[:, :]
+        # 裁剪无用的数据
+        frame_out = frame_pixels[0:height, 0:width]
+        return frame_out        
+    else:
         new_height_12 = int(math.floor((height + 63) / 64)) * 64
         new_width_12 = int(width / 2 * 3)
         image_bytes = new_height_12 * new_width_12
@@ -473,9 +505,9 @@ def read_packed_word_12(file_path_name, height, width):
             print('%#x' % frame_12[0])
             frame_12.shape = [new_height_12, new_width_12]  # 高字节整理图像矩阵
             # 5字节读取数据
-            one_byte = frame_12[:, 0:image_bytes:3]
-            two_byte = frame_12[:, 1:image_bytes:3]
-            three_byte = frame_12[:, 2:image_bytes:3]
+            one_byte = frame_12[:, 0:new_width_12:3]
+            two_byte = frame_12[:, 1:new_width_12:3]
+            three_byte = frame_12[:, 2:new_width_12:3]
             # 数据转换防止溢出
             one_byte = one_byte.astype('uint16')
             two_byte = two_byte.astype('uint16')

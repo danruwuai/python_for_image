@@ -82,7 +82,7 @@ def raw_image_show_fakecolor(image, height, width, pattern):
         R[1::2, 1::2] = image[1::2, 1::2]
     else:
         print("show failed")
-        return
+        return False
     plt.figure(num='test', figsize=(x, y))
     plt.imshow(rgb_img, interpolation='bicubic', vmax=1.0)
     plt.xticks([]), plt.yticks([])

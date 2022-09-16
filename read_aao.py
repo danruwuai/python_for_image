@@ -14,6 +14,7 @@ def get_aao_file(dir_path):
         # file_list.extend(os.path.join(root, file) for file in files if file.endswith("raw_word"))
         # 获取文件名
         file_list_aao.extend(os.path.join("", file) for file in files if file.endswith("aao"))
+        file_list_aao.extend(os.path.join("", file) for file in files if (file.endswith("raw") and "aao_" in file))
 
     return file_list_aao
 
@@ -69,6 +70,22 @@ def do_aao(frame_data, height, width, current_height, name):
     frame_pixels[:, :, 0] = R_byte
     frame_pixels[:, :, 1] = G_byte
     frame_pixels[:, :, 2] = B_byte
+    # 创建CSV表格数据，内容赋值空（nan）
+    csv_data = np.full([592, 128], np.NaN)
+    np.savetxt(name + '1.csv', csv_data, delimiter = ",")
+    csv_data = csv_data.astype('str')
+    csv_data[0, 0] = "R_AVG"
+    R_AVG_data = R_byte
+    R_AVG_data = R_AVG_data.astype('str')
+    csv_data[1: current_height + 1, 0: width] = R_AVG_data
+    csv_data[99, 0] = "G_AVG"
+    G_AVG_data = G_byte
+    G_AVG_data = G_AVG_data.astype('str')
+    csv_data[100: current_height + 100, 0: width] = G_AVG_data
+    csv_data[199, 0] = "B_AVG"
+    B_AVG_data = B_byte
+    B_AVG_data = B_AVG_data.astype('str')
+    csv_data[200: current_height + 200, 0: width] = B_AVG_data
     """
     # 显示函数直接显示效果
     frame_pixels = frame_pixels / 4095.0
@@ -134,7 +151,8 @@ def do_aao(frame_data, height, width, current_height, name):
     frame_pixels = frame_pixels.astype(np.float32)
     cv.imwrite(name + '_high.bmp', cv.cvtColor(frame_pixels, cv.COLOR_RGBA2BGRA),[int(cv.IMWRITE_JPEG_QUALITY), 100])
     """
-    
+    #np.savetxt(name + '.csv', csv_data, delimiter = ",",fmt = '%.0f')
+    np.savetxt(name + '.csv', csv_data, delimiter = ",", fmt = '%s')
     
 if __name__ == "__main__":
     load_aao()

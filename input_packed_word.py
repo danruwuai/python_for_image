@@ -75,6 +75,8 @@ def input_pack_word():
         # 读取packed_word,raw_name
         frame_raw, raw_name, width, yuv_flag = readpackedword.read_packed_word(file_packed_word, packed_height, packed_width,
                                                                      packed_bayer, packed_bit)
+        if raw_name == False:
+            continue
         if yuv_flag == 1:
             frame_raw = frame_raw / 16
             frame_raw = frame_raw.astype(np.uint8)
@@ -138,31 +140,44 @@ def input_pack_word_s0():
         packed_height = packed_info[packed_info.find('x') + 1:packed_info.find('.') - 6]
         packed_width = packed_info[packed_info.find('__') + 2:packed_info.find('x')]
         packed_bit = packed_info[packed_info.find('.') - 5:packed_info.find('.') - 3]
+        packed_pw_width = file_packed_word_s0[file_packed_word_s0.find('PW')+2:file_packed_word_s0.find('-PH')]
+        packed_ph_height = file_packed_word_s0[file_packed_word_s0.find('PH')+2:file_packed_word_s0.find('-BW')]
+        packed_BW_width = file_packed_word_s0[file_packed_word_s0.find('BW')+2:file_packed_word_s0.find('__')]
         # 字符串转int
         packed_height = int(packed_height)
         packed_width = int(packed_width)
         packed_bit = int(packed_bit)
+        packed_pw_width = int(packed_pw_width)
+        packed_ph_height= int(packed_ph_height)
+        packed_BW_width = int(packed_BW_width)        
         print("width:", packed_width)
         print("height:", packed_height)
         print("bit:", packed_bit)
+        print("width:", packed_width)
+        print("height:", packed_height)
+        print("bit:", packed_bit)        
         # 读取cplane名字
         yplane_name = file_packed_word_s0
         # 读取yplane名字
         cplane_name = yplane_name.replace('yplane', 'cplane')
         # 读取packed_word_s0_yplan,raw_name
-        frame_yplane, frame_yplane_name, width = readpackedword.read_packed_word_yplane(yplane_name, packed_height, packed_width, packed_bit)
+        frame_yplane, frame_yplane_name, width = readpackedword.read_packed_word_yplane(yplane_name, packed_height, packed_width, packed_bit, packed_ph_height, packed_pw_width, packed_BW_width)
+        if frame_yplane_name == False:
+            continue
         """
         # 输出对应的bmp图片
         frame_yplane = frame_yplane / 16
         # cv.imwrite(f'{raw_name}bmp', frame_raw)
-        # imwrite默认输出的是BGR图片，所以需要RGB转换未BGR再输出。
+        # imwrite默认输出的是BGR图片,所以需要RGB转换未BGR再输出。
         frame_yplane = frame_yplane.astype(np.uint8)
         cv.imwrite(yplane_name + '.bmp', frame_yplane)
         """
         # 如果存在cplane的packed_word,进行yuv转换
         if os.path.exists(cplane_name):
             # 读取packed_word_s0_cplan,raw_name
-            frame_cb, frame_cr, frame_cplane_name, width = readpackedword.read_packed_word_cplane(cplane_name, packed_height // 2, packed_width, packed_bit)
+            frame_cb, frame_cr, frame_cplane_name, width = readpackedword.read_packed_word_cplane(cplane_name, packed_height // 2, packed_width, packed_bit, packed_ph_height // 2, packed_pw_width, packed_BW_width)
+            if frame_cplane_name == False:
+                continue
             """
             frame_cb = frame_cb / 16
             frame_cr = frame_cr / 16

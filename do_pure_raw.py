@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
+from pickle import FALSE
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -42,7 +43,7 @@ def do_bayer_color(file_name, height, width, bayer):
         R[1::2, 1::2] = file_name[1::2, 1::2]
     else:
         print("no match bayer")
-        return
+        return False
     return rgb_img
 
 
@@ -90,7 +91,7 @@ def bayer_channel_separation(data, pattern):
     else:
         print("no match pattern")
         print("pattern must be one of ： RGGB GRBG GBRG BGGR or 0 1 2 3")
-        return
+        return FALSE
     return R, GR, GB, B
 
 

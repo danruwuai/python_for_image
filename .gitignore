@@ -10,3 +10,4 @@ packed/*.pyd
 *.aao
 *.hw_aao
 *.nv21
+*.csv
