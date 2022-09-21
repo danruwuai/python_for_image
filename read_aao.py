@@ -111,7 +111,7 @@ def do_aao(frame_data, height, width, current_height, name, flag):
     # imwrite默认输出的是BGR图片，所以需要RGB转换未BGR再输出。
     frame_pixels = frame_pixels.astype(np.float32)
     cv.imwrite(name + '.bmp', cv.cvtColor(frame_pixels, cv.COLOR_RGBA2BGRA), [int(cv.IMWRITE_JPEG_QUALITY), 100])
-    print("输出12bit的aao图片：", name + '.bmp')
+    print("输出12bit的aao图片:", name + '.bmp')
     # 如果flag == 1 or flag == 2,输出高字节的图片
     if flag == 1 or flag == 2:
         # aao数据中，每一块的统计数据分析。18位数据统计
@@ -161,7 +161,7 @@ def do_aao(frame_data, height, width, current_height, name, flag):
             # 替换csv_data数据里的-1为空
             csv_data[csv_data == '-1'] = ''
             np.savetxt(name + '.csv', csv_data, delimiter=",", fmt='%s')
-            print("输出aao统计数据：", name + '.csv')
+            print("输出aao统计数据:", name + '.csv')
         """
         # 图像显示
         frame_pixels = frame_pixels / 262143.0
@@ -178,7 +178,7 @@ def do_aao(frame_data, height, width, current_height, name, flag):
         # imwrite默认输出的是BGR图片，所以需要RGB转换未BGR再输出。
         frame_pixels = frame_pixels.astype(np.float32)
         cv.imwrite(name + '_high.bmp', cv.cvtColor(frame_pixels, cv.COLOR_RGBA2BGRA), [int(cv.IMWRITE_JPEG_QUALITY), 100])
-        print("输出18bit的aao图片：", name + '_high.bmp')
+        print("输出18bit的aao图片:", name + '_high.bmp')
 
 
 

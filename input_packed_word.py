@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
 
+from formatter import NullFormatter
+from struct import pack
 import numpy as np
 import os
 import sys
@@ -11,31 +13,31 @@ import read_packed_word as readpackedword
 # 获取packed_word文件列表
 def get_packed_word_file(dir_path):
     file_list = []
-    for root, dirs, files in os.walk(dir_path):
+    for root, dirs, files in os.walk(dir_path):  # 遍历所有子目录        
         # 获取完整路径
         # file_list.extend(os.path.join(root, file) for file in files if file.endswith("packed_word"))
         # 获取文件名
-        file_list.extend(os.path.join("", file) for file in files if (file.endswith("packed_word") and "_s0." not in file))
-
+        file_list.extend(os.path.join("", file) for file in files if (file.endswith('.packed_word') and '-yplane-' not in file and 'cplane' not in file))
+        # print(file_list)
     return file_list
 
 
 # 获取packed_word（s0）文件列表
 def get_packed_word_s0_file(dir_path):
     file_list_s0 = []
-    for root, dirs, files in os.walk(dir_path):
+    for root, dirs, files in os.walk(dir_path):  # 遍历所有子目录
         # 获取完整路径
         # file_list.extend(os.path.join(root, file) for file in files if file.endswith("packed_word"))
         # 获取文件名
         file_list_s0.extend(os.path.join("", file) for file in files if (file.endswith("packed_word") and "_s0." in file and "yplane" in file))
-
+        # print(file_list_s0)
     return file_list_s0
 
 
 # 获取lsc_raw文件列表
 def get_lsc_raw_file(dir_path):
     file_list_lsc = []
-    for root, dirs, files in os.walk(dir_path):
+    for root, dirs, files in os.walk(dir_path):  # 遍历所有子目录 
         # 获取完整路径
         # file_list.extend(os.path.join(root, file) for file in files if file.endswith("packed_word"))
         # 获取文件名
@@ -117,6 +119,8 @@ def input_lsc_raw():
         frame_raw, raw_name = readpackedword.read_lsc_raw(file_lsc_raw, packed_height, packed_width,
                                                                      packed_bayer)
         frame_raw = frame_raw / 16
+        # 由于16bit转12bit，会有超出255的值。
+        frame_raw = np.clip(frame_raw, 0, 255)
         # cv.imwrite(f'{raw_name}bmp', frame_raw)
         # imwrite默认输出的是BGR图片，所以需要RGB转换未BGR再输出。
 
@@ -131,7 +135,7 @@ def input_pack_word_s0():
     current_working_dir = os.getcwd()
     # 路径下所有文件列表
     file_packed_word_s0_list = get_packed_word_s0_file(current_working_dir)
-    # print(file_packed_word_list)
+    # print(file_packed_word_s0_list)
     # 循环查找packed_word_s0的文件
     for file_packed_word_s0 in file_packed_word_s0_list:
         print("获取的文件：", file_packed_word_s0)
@@ -143,19 +147,22 @@ def input_pack_word_s0():
         packed_pw_width = file_packed_word_s0[file_packed_word_s0.find('PW')+2:file_packed_word_s0.find('-PH')]
         packed_ph_height = file_packed_word_s0[file_packed_word_s0.find('PH')+2:file_packed_word_s0.find('-BW')]
         packed_BW_width = file_packed_word_s0[file_packed_word_s0.find('BW')+2:file_packed_word_s0.find('__')]
+        # 如果没有对应的ph,pw,bw,赋值-1
+        if packed_ph_height == file_packed_word_s0[1:-1] or packed_BW_width == file_packed_word_s0[1:-1] or packed_pw_width == file_packed_word_s0[1:-1]:
+            packed_BW_width=packed_ph_height=packed_pw_width = '-1'
         # 字符串转int
         packed_height = int(packed_height)
         packed_width = int(packed_width)
         packed_bit = int(packed_bit)
         packed_pw_width = int(packed_pw_width)
         packed_ph_height= int(packed_ph_height)
-        packed_BW_width = int(packed_BW_width)        
+        packed_BW_width = int(packed_BW_width)
         print("width:", packed_width)
         print("height:", packed_height)
         print("bit:", packed_bit)
-        print("width:", packed_width)
-        print("height:", packed_height)
-        print("bit:", packed_bit)        
+        print("line_width:", packed_pw_width)
+        print("frame_height:", packed_ph_height)
+        print("Bayer_W:", packed_BW_width)
         # 读取cplane名字
         yplane_name = file_packed_word_s0
         # 读取yplane名字
@@ -182,7 +189,7 @@ def input_pack_word_s0():
             frame_cb = frame_cb / 16
             frame_cr = frame_cr / 16
             # cv.imwrite(f'{raw_name}bmp', frame_raw)
-            # imwrite默认输出的是BGR图片，所以需要RGB转换未BGR再输出。
+            # imwrite默认输出的是BGR图片,所以需要RGB转换未BGR再输出。
             frame_cb = frame_cb.astype(np.uint8)
             frame_cr = frame_cr.astype(np.uint8)
             cv.imwrite(frame_cplane_name + '_cb.bmp', frame_cb)
@@ -198,7 +205,7 @@ def input_pack_word_s0():
             # cv.imwrite(f'{raw_name}bmp', frame_raw)
             # imwrite默认输出的是BGR图片，所以需要RGB转换未BGR再输出。
             frame_yplane = frame_yplane.astype(np.uint8)
-            cv.imwrite(frame_yplane_name + '.bmp', frame_yplane)            
+            cv.imwrite(frame_yplane_name + '.bmp', frame_yplane)
         print("################################################################")
         
         

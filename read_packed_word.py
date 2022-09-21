@@ -181,7 +181,7 @@ def read_lsc_raw(file_path_name, height, width, bayer):
     raw_name = raw_name.replace('_16_', '_12_')
     """
     raw_byte = frame
-    # 转换为8bit，输出对应raw数据
+    # 转换为8bit,输出对应raw数据
     frame_raw_low = np.uint8(raw_byte)  # 低8位获取
     raw_byte = raw_byte.astype('uint16')
     raw_byte = np.right_shift(raw_byte, 8)
@@ -223,6 +223,12 @@ def read_lsc_raw(file_path_name, height, width, bayer):
     else:
         print("no match bayer")
         return frame, raw_name
+    """
+    np.savetxt('R.csv', R, delimiter=",", fmt='%s')
+    np.savetxt('GR.csv', GR, delimiter=",", fmt='%s')
+    np.savetxt('GB.csv', GB, delimiter=",", fmt='%s')
+    np.savetxt('B.csv', B, delimiter=",", fmt='%s')
+    """
     return rgb_img, raw_name
 
 
@@ -259,165 +265,177 @@ def read_packed_word_yplane(file_path_name, height, width, bit, ph_height, pw_wi
         if frame_out is False:
             return False, False, False
     else:
-        # 调用函数获取实际width
-        new_width, width_real, width_byte_num, packet_num_L, width_flag = get_width_real(file_path_name, height, width)
-        print("width_flag:", width_flag)
-        # 求对应的商和余值
-        packet_num_L, Align_num = divmod(width_byte_num, 5)
-        image_bytes = width_byte_num * height  # 获取图片真实的大小
-        frame = np.fromfile(file_path_name, count=image_bytes, dtype="uint8")
-        print("b shape", frame.shape)
-        print('%#x' % frame[0])
-        frame.shape = [height, width_byte_num]  # 高字节整理图像矩阵
-        # 5字节读取数据
-        one_byte = frame[:, 0:image_bytes:5]
-        two_byte = frame[:, 1:image_bytes:5]
-        three_byte = frame[:, 2:image_bytes:5]
-        four_byte = frame[:, 3:image_bytes:5]
-        five_byte = frame[:, 4:image_bytes:5]
-        # 计算补偿的0值
-        if Align_num == 1:
-            two_byte = np.column_stack((two_byte, np.arange(1, height + 1)))
-            three_byte = np.column_stack((three_byte, np.arange(1, height + 1)))
-            four_byte = np.column_stack((four_byte, np.arange(1, height + 1)))
-            five_byte = np.column_stack((five_byte, np.arange(1, height + 1)))
-            print('Aligh is 1')
-        elif Align_num == 2:
-            three_byte = np.column_stack((three_byte, np.arange(1, height + 1)))
-            four_byte = np.column_stack((four_byte, np.arange(1, height + 1)))
-            five_byte = np.column_stack((five_byte, np.arange(1, height + 1)))
-            print('Aligh is 2')
-        elif Align_num == 3:
-            four_byte = np.column_stack((four_byte, np.arange(1, height + 1)))
-            five_byte = np.column_stack((five_byte, np.arange(1, height + 1)))
-            print('Aligh is 3')
-        elif Align_num == 4:
-            five_byte = np.column_stack((five_byte, np.arange(1, height + 1)))
-            print('Aligh is 4')
+        if ph_height == -1 and pw_width == -1 and bw_width == -1:
+            # 调用函数获取实际width
+            new_width, width_real, width_byte_num, packet_num_L, width_flag = get_width_real(file_path_name, height, width)
+            print("width_flag:", width_flag)
+            # 求对应的商和余值
+            packet_num_L, Align_num = divmod(width_byte_num, 5)
+            image_bytes = width_byte_num * height  # 获取图片真实的大小
+            frame = np.fromfile(file_path_name, count=image_bytes, dtype="uint8")
+            print("b shape", frame.shape)
+            print('%#x' % frame[0])
+            frame.shape = [height, width_byte_num]  # 高字节整理图像矩阵
+            # 5字节读取数据
+            one_byte = frame[:, 0:image_bytes:5]
+            two_byte = frame[:, 1:image_bytes:5]
+            three_byte = frame[:, 2:image_bytes:5]
+            four_byte = frame[:, 3:image_bytes:5]
+            five_byte = frame[:, 4:image_bytes:5]
+            # 计算补偿的0值
+            if Align_num == 1:
+                two_byte = np.column_stack((two_byte, np.arange(1, height + 1)))
+                three_byte = np.column_stack((three_byte, np.arange(1, height + 1)))
+                four_byte = np.column_stack((four_byte, np.arange(1, height + 1)))
+                five_byte = np.column_stack((five_byte, np.arange(1, height + 1)))
+                print('Aligh is 1')
+            elif Align_num == 2:
+                three_byte = np.column_stack((three_byte, np.arange(1, height + 1)))
+                four_byte = np.column_stack((four_byte, np.arange(1, height + 1)))
+                five_byte = np.column_stack((five_byte, np.arange(1, height + 1)))
+                print('Aligh is 2')
+            elif Align_num == 3:
+                four_byte = np.column_stack((four_byte, np.arange(1, height + 1)))
+                five_byte = np.column_stack((five_byte, np.arange(1, height + 1)))
+                print('Aligh is 3')
+            elif Align_num == 4:
+                five_byte = np.column_stack((five_byte, np.arange(1, height + 1)))
+                print('Aligh is 4')
+            else:
+                print('That is not to Aligh')
+            # 数据转换防止溢出
+            one_byte = one_byte.astype('uint16')
+            two_byte = two_byte.astype('uint16')
+            three_byte = three_byte.astype('uint16')
+            four_byte = four_byte.astype('uint16')
+            five_byte = five_byte.astype('uint16')
+            # 用矩阵的方法进行像素的拼接
+            one_byte = np.left_shift(np.bitwise_and(two_byte, 3), 10) + np.left_shift(one_byte, 2)
+            two_byte = np.bitwise_and(two_byte, 252) + np.left_shift(np.bitwise_and(three_byte, 15), 8)
+            three_byte = np.right_shift(np.bitwise_and(three_byte, 240), 2) + np.left_shift(np.bitwise_and(four_byte, 63),
+                                                                                            6)
+            four_byte = np.right_shift(np.bitwise_and(four_byte, 192), 4) + np.left_shift(five_byte, 4)
+            # 整合各通道数据到一起
+            frame_pixels = np.zeros(shape=(height, new_width))
+            frame_pixels[:, 0:new_width:4] = one_byte[:, 0:packet_num_L]
+            frame_pixels[:, 1:new_width:4] = two_byte[:, 0:packet_num_L]
+            frame_pixels[:, 2:new_width:4] = three_byte[:, 0:packet_num_L]
+            frame_pixels[:, 3:new_width:4] = four_byte[:, 0:packet_num_L]
+            # 裁剪无用的数据
+            frame_out = frame_pixels[:, 0:width_real]
+            # 替换10 bit为12 bit
+            raw_name = file_path_name[:-12]
+            raw_name = raw_name.replace('_10_', '_12_')
+            # 判断width是否正确
+            if width_flag == 1:
+                print("Wrong width,Calculated real width ")
+                new_width_real = width_real
+                for i in range(width_real - 32, width_real):  # 在末尾32字节范围内判断
+                    if frame_out[0, i] == 0:  # 判断为0的补偿值
+                        if frame_out[int(height / 2), i] == 0:  # 判断为0的补偿值
+                            if i < new_width_real:
+                                new_width_real = i
+                                print("new_width_real = ", new_width_real)
+                frame_out = frame_out[:, 0:new_width_real]  # 裁剪无用数据
+                raw_name = raw_name.replace(f'_{width}x', f'_{new_width_real}x')  # 更换实际的width
+                print("raw_name = ", raw_name)
+                width = new_width_real
         else:
-            print('That is not to Aligh')
-        # 数据转换防止溢出
-        one_byte = one_byte.astype('uint16')
-        two_byte = two_byte.astype('uint16')
-        three_byte = three_byte.astype('uint16')
-        four_byte = four_byte.astype('uint16')
-        five_byte = five_byte.astype('uint16')
-        # 用矩阵的方法进行像素的拼接
-        one_byte = np.left_shift(np.bitwise_and(two_byte, 3), 10) + np.left_shift(one_byte, 2)
-        two_byte = np.bitwise_and(two_byte, 252) + np.left_shift(np.bitwise_and(three_byte, 15), 8)
-        three_byte = np.right_shift(np.bitwise_and(three_byte, 240), 2) + np.left_shift(np.bitwise_and(four_byte, 63),
-                                                                                        6)
-        four_byte = np.right_shift(np.bitwise_and(four_byte, 192), 4) + np.left_shift(five_byte, 4)
-        # 整合各通道数据到一起
-        frame_pixels = np.zeros(shape=(height, new_width))
-        frame_pixels[:, 0:new_width:4] = one_byte[:, 0:packet_num_L]
-        frame_pixels[:, 1:new_width:4] = two_byte[:, 0:packet_num_L]
-        frame_pixels[:, 2:new_width:4] = three_byte[:, 0:packet_num_L]
-        frame_pixels[:, 3:new_width:4] = four_byte[:, 0:packet_num_L]
-        # 裁剪无用的数据
-        frame_out = frame_pixels[:, 0:width_real]
-        # 替换10 bit为12 bit
-        raw_name = file_path_name[:-12]
-        raw_name = raw_name.replace('_10_', '_12_')
-        # 判断width是否正确
-        if width_flag == 1:
-            print("Wrong width,Calculated real width ")
-            new_width_real = width_real
-            for i in range(width_real - 32, width_real):  # 在末尾32字节范围内判断
-                if frame_out[0, i] == 0:  # 判断为0的补偿值
-                    if frame_out[int(height / 2), i] == 0:  # 判断为0的补偿值
-                        if i < new_width_real:
-                            new_width_real = i
-                            print("new_width_real = ", new_width_real)
-            frame_out = frame_out[:, 0:new_width_real]  # 裁剪无用数据
-            raw_name = raw_name.replace(f'_{width}x', f'_{new_width_real}x')  # 更换实际的width
-            print("raw_name = ", raw_name)
-            width = new_width_real
+            frame_out = transf_packed_to_raw(file_path_name, height, width, ph_height, pw_width, bw_width)
+            # 替换10 bit为12 bit
+            raw_name = file_path_name[:-12]
+            raw_name = raw_name.replace('_10_', '_12_')
     return frame_out, raw_name, width
 
 
 # 读取packed_word_cplane信息，返回数据和raw_name,准确的width
 def read_packed_word_cplane(file_path_name, height, width, bit, ph_height, pw_width, bw_width):
     if bit == 12:
-        frame_out = read_packed_word_12(file_path_name, height, width, ph_height, pw_width, bw_width)
+        frame_out = read_packed_word_cplane_12(file_path_name, height, width, ph_height, pw_width, bw_width)
         raw_name = file_path_name[:-12]
         if frame_out is False:
             return False, False, False, False
     else:
-        # 调用函数获取实际width
-        new_width, width_real, width_byte_num, packet_num_L, width_flag = get_width_real(file_path_name, height, width)
-        print("width_flag:", width_flag)
-        # 求对应的商和余值
-        packet_num_L, Align_num = divmod(width_byte_num, 5)
-        image_bytes = width_byte_num * height  # 获取图片真实的大小
-        frame = np.fromfile(file_path_name, count=image_bytes, dtype="uint8")
-        print("b shape", frame.shape)
-        print('%#x' % frame[0])
-        frame.shape = [height, width_byte_num]  # 高字节整理图像矩阵
-        # 5字节读取数据
-        one_byte = frame[:, 0:image_bytes:5]
-        two_byte = frame[:, 1:image_bytes:5]
-        three_byte = frame[:, 2:image_bytes:5]
-        four_byte = frame[:, 3:image_bytes:5]
-        five_byte = frame[:, 4:image_bytes:5]
-        # 计算补偿的0值
-        if Align_num == 1:
-            two_byte = np.column_stack((two_byte, np.arange(1, height + 1)))
-            three_byte = np.column_stack((three_byte, np.arange(1, height + 1)))
-            four_byte = np.column_stack((four_byte, np.arange(1, height + 1)))
-            five_byte = np.column_stack((five_byte, np.arange(1, height + 1)))
-            print('Aligh is 1')
-        elif Align_num == 2:
-            three_byte = np.column_stack((three_byte, np.arange(1, height + 1)))
-            four_byte = np.column_stack((four_byte, np.arange(1, height + 1)))
-            five_byte = np.column_stack((five_byte, np.arange(1, height + 1)))
-            print('Aligh is 2')
-        elif Align_num == 3:
-            four_byte = np.column_stack((four_byte, np.arange(1, height + 1)))
-            five_byte = np.column_stack((five_byte, np.arange(1, height + 1)))
-            print('Aligh is 3')
-        elif Align_num == 4:
-            five_byte = np.column_stack((five_byte, np.arange(1, height + 1)))
-            print('Aligh is 4')
+        if ph_height == -1 and pw_width == -1 and bw_width == -1:
+            # 调用函数获取实际width
+            new_width, width_real, width_byte_num, packet_num_L, width_flag = get_width_real(file_path_name, height, width)
+            print("width_flag:", width_flag)
+            # 求对应的商和余值
+            packet_num_L, Align_num = divmod(width_byte_num, 5)
+            image_bytes = width_byte_num * height  # 获取图片真实的大小
+            frame = np.fromfile(file_path_name, count=image_bytes, dtype="uint8")
+            print("b shape", frame.shape)
+            print('%#x' % frame[0])
+            frame.shape = [height, width_byte_num]  # 高字节整理图像矩阵
+            # 5字节读取数据
+            one_byte = frame[:, 0:image_bytes:5]
+            two_byte = frame[:, 1:image_bytes:5]
+            three_byte = frame[:, 2:image_bytes:5]
+            four_byte = frame[:, 3:image_bytes:5]
+            five_byte = frame[:, 4:image_bytes:5]
+            # 计算补偿的0值
+            if Align_num == 1:
+                two_byte = np.column_stack((two_byte, np.arange(1, height + 1)))
+                three_byte = np.column_stack((three_byte, np.arange(1, height + 1)))
+                four_byte = np.column_stack((four_byte, np.arange(1, height + 1)))
+                five_byte = np.column_stack((five_byte, np.arange(1, height + 1)))
+                print('Aligh is 1')
+            elif Align_num == 2:
+                three_byte = np.column_stack((three_byte, np.arange(1, height + 1)))
+                four_byte = np.column_stack((four_byte, np.arange(1, height + 1)))
+                five_byte = np.column_stack((five_byte, np.arange(1, height + 1)))
+                print('Aligh is 2')
+            elif Align_num == 3:
+                four_byte = np.column_stack((four_byte, np.arange(1, height + 1)))
+                five_byte = np.column_stack((five_byte, np.arange(1, height + 1)))
+                print('Aligh is 3')
+            elif Align_num == 4:
+                five_byte = np.column_stack((five_byte, np.arange(1, height + 1)))
+                print('Aligh is 4')
+            else:
+                print('That is not to Aligh')
+            # 数据转换防止溢出
+            one_byte = one_byte.astype('uint16')
+            two_byte = two_byte.astype('uint16')
+            three_byte = three_byte.astype('uint16')
+            four_byte = four_byte.astype('uint16')
+            five_byte = five_byte.astype('uint16')
+            # 用矩阵的方法进行像素的拼接
+            one_byte = np.left_shift(np.bitwise_and(two_byte, 3), 10) + np.left_shift(one_byte, 2)
+            two_byte = np.bitwise_and(two_byte, 252) + np.left_shift(np.bitwise_and(three_byte, 15), 8)
+            three_byte = np.right_shift(np.bitwise_and(three_byte, 240), 2) + np.left_shift(np.bitwise_and(four_byte, 63),
+                                                                                            6)
+            four_byte = np.right_shift(np.bitwise_and(four_byte, 192), 4) + np.left_shift(five_byte, 4)
+            # 整合各通道数据到一起
+            frame_pixels = np.zeros(shape=(height, new_width))
+            frame_pixels[:, 0:new_width:4] = one_byte[:, 0:packet_num_L]
+            frame_pixels[:, 1:new_width:4] = two_byte[:, 0:packet_num_L]
+            frame_pixels[:, 2:new_width:4] = three_byte[:, 0:packet_num_L]
+            frame_pixels[:, 3:new_width:4] = four_byte[:, 0:packet_num_L]
+            # 裁剪无用的数据
+            frame_out = frame_pixels[:, 0:width_real]
+            # 替换10 bit为12 bit
+            raw_name = file_path_name[:-12]
+            raw_name = raw_name.replace('_10_', '_12_')
+            # 判断width是否正确
+            if width_flag == 1:
+                print("Wrong width,Calculated real width ")
+                new_width_real = width_real
+                for i in range(width_real - 32, width_real):  # 在末尾32字节范围内判断
+                    if frame_out[0, i] == 0:  # 判断为0的补偿值
+                        if frame_out[int(height / 2), i] == 0:  # 判断为0的补偿值
+                            if i < new_width_real:
+                                new_width_real = i
+                                print("new_width_real = ", new_width_real)
+                frame_out = frame_out[:, 0:new_width_real]  # 裁剪无用数据
+                raw_name = raw_name.replace(f'_{width}x', f'_{new_width_real}x')  # 更换实际的width
+                print("raw_name = ", raw_name)
+                width = new_width_real
         else:
-            print('That is not to Aligh')
-        # 数据转换防止溢出
-        one_byte = one_byte.astype('uint16')
-        two_byte = two_byte.astype('uint16')
-        three_byte = three_byte.astype('uint16')
-        four_byte = four_byte.astype('uint16')
-        five_byte = five_byte.astype('uint16')
-        # 用矩阵的方法进行像素的拼接
-        one_byte = np.left_shift(np.bitwise_and(two_byte, 3), 10) + np.left_shift(one_byte, 2)
-        two_byte = np.bitwise_and(two_byte, 252) + np.left_shift(np.bitwise_and(three_byte, 15), 8)
-        three_byte = np.right_shift(np.bitwise_and(three_byte, 240), 2) + np.left_shift(np.bitwise_and(four_byte, 63),
-                                                                                        6)
-        four_byte = np.right_shift(np.bitwise_and(four_byte, 192), 4) + np.left_shift(five_byte, 4)
-        # 整合各通道数据到一起
-        frame_pixels = np.zeros(shape=(height, new_width))
-        frame_pixels[:, 0:new_width:4] = one_byte[:, 0:packet_num_L]
-        frame_pixels[:, 1:new_width:4] = two_byte[:, 0:packet_num_L]
-        frame_pixels[:, 2:new_width:4] = three_byte[:, 0:packet_num_L]
-        frame_pixels[:, 3:new_width:4] = four_byte[:, 0:packet_num_L]
-        # 裁剪无用的数据
-        frame_out = frame_pixels[:, 0:width_real]
-        # 替换10 bit为12 bit
-        raw_name = file_path_name[:-12]
-        raw_name = raw_name.replace('_10_', '_12_')
-        # 判断width是否正确
-        if width_flag == 1:
-            print("Wrong width,Calculated real width ")
-            new_width_real = width_real
-            for i in range(width_real - 32, width_real):  # 在末尾32字节范围内判断
-                if frame_out[0, i] == 0:  # 判断为0的补偿值
-                    if frame_out[int(height / 2), i] == 0:  # 判断为0的补偿值
-                        if i < new_width_real:
-                            new_width_real = i
-                            print("new_width_real = ", new_width_real)
-            frame_out = frame_out[:, 0:new_width_real]  # 裁剪无用数据
-            raw_name = raw_name.replace(f'_{width}x', f'_{new_width_real}x')  # 更换实际的width
-            print("raw_name = ", raw_name)
-            width = new_width_real
+            frame_out = transf_packed_to_raw(file_path_name, height, width, ph_height, pw_width, bw_width)
+            # 替换10 bit为12 bit
+            raw_name = file_path_name[:-12]
+            raw_name = raw_name.replace('_10_', '_12_')
     Cb = frame_out[:, 0:width: 2]
     Cr = frame_out[:, 1:width: 2]
     # 扩展到(height，width)
@@ -468,7 +486,7 @@ def do_ycbcr(frame_y, frame_cb, frame_cr, height, width, yuv_name):
 
 
 def read_packed_word_12(file_path_name, height, width, ph_height, pw_width, bw_width):
-    if ph_height and pw_width and bw_width:
+    if ph_height != -1 and pw_width != -1 and bw_width != -1:
         image_bytes = bw_width * ph_height
         frame_12 = np.fromfile(file_path_name, count=image_bytes, dtype="uint8")
         print("b shape", frame_12.shape)
@@ -489,9 +507,7 @@ def read_packed_word_12(file_path_name, height, width, ph_height, pw_width, bw_w
         frame_pixels = np.zeros(shape=(ph_height, pw_width))
         frame_pixels[:, 0:pw_width:2] = one_byte[:, :]
         frame_pixels[:, 1:pw_width:2] = two_byte[:, :]
-        # 裁剪无用的数据
-        frame_out = frame_pixels[0:height, 0:width]
-        return frame_out        
+        return frame_pixels[0:height, 0:width]  # 裁剪无用数据
     else:
         new_height_12 = int(math.floor((height + 63) / 64)) * 64
         new_width_12 = int(width / 2 * 3)
@@ -499,66 +515,149 @@ def read_packed_word_12(file_path_name, height, width, ph_height, pw_width, bw_w
         # 获取文件大小
         file_num = os.path.getsize(file_path_name)
         print("file_num: ", file_num)
-        if file_num == image_bytes:
-            frame_12 = np.fromfile(file_path_name, count=image_bytes, dtype="uint8")
-            print("b shape", frame_12.shape)
-            print('%#x' % frame_12[0])
-            frame_12.shape = [new_height_12, new_width_12]  # 高字节整理图像矩阵
-            # 5字节读取数据
-            one_byte = frame_12[:, 0:new_width_12:3]
-            two_byte = frame_12[:, 1:new_width_12:3]
-            three_byte = frame_12[:, 2:new_width_12:3]
-            # 数据转换防止溢出
-            one_byte = one_byte.astype('uint16')
-            two_byte = two_byte.astype('uint16')
-            three_byte = three_byte.astype('uint16')
-            # 用矩阵的方法进行像素的拼接
-            one_byte = np.left_shift(np.bitwise_and(two_byte, 15), 8) + one_byte
-            two_byte = np.right_shift(np.bitwise_and(two_byte, 240), 4) + np.left_shift(three_byte, 4)
-            # 整合各通道数据到一起
-            frame_pixels = np.zeros(shape=(new_height_12, width))
-            frame_pixels[:, 0:width:2] = one_byte[:, :]
-            frame_pixels[:, 1:width:2] = two_byte[:, :]
-
-            # 裁剪无用的数据
-            frame_out = frame_pixels[0:height, :]
-            return frame_out
-        else:
+        if file_num != image_bytes:
             return False
+        frame_12 = np.fromfile(file_path_name, count=image_bytes, dtype="uint8")
+        print("b shape", frame_12.shape)
+        print('%#x' % frame_12[0])
+        frame_12.shape = [new_height_12, new_width_12]  # 高字节整理图像矩阵
+        # 5字节读取数据
+        one_byte = frame_12[:, 0:new_width_12:3]
+        two_byte = frame_12[:, 1:new_width_12:3]
+        three_byte = frame_12[:, 2:new_width_12:3]
+        # 数据转换防止溢出
+        one_byte = one_byte.astype('uint16')
+        two_byte = two_byte.astype('uint16')
+        three_byte = three_byte.astype('uint16')
+        # 用矩阵的方法进行像素的拼接
+        one_byte = np.left_shift(np.bitwise_and(two_byte, 15), 8) + one_byte
+        two_byte = np.right_shift(np.bitwise_and(two_byte, 240), 4) + np.left_shift(three_byte, 4)
+        # 整合各通道数据到一起
+        frame_pixels = np.zeros(shape=(new_height_12, width))
+        frame_pixels[:, 0:width:2] = one_byte[:, :]
+        frame_pixels[:, 1:width:2] = two_byte[:, :]
+
+        return frame_pixels[0:height, :]
+
+def transf_packed_to_raw(file_path_name, height, width, ph_height, pw_width, bw_width):
+    print("exist PW PH and BW")
+    packet_num_L, Align_num = divmod(bw_width, 5)
+    image_bytes = bw_width * ph_height  # 获取图片真实的大小
+    frame = np.fromfile(file_path_name, count=image_bytes, dtype="uint8")
+    print("b shape", frame.shape)
+    print('%#x' % frame[0])
+    frame.shape = [ph_height, bw_width]  # 高字节整理图像矩阵
+    # 5字节读取数据
+    one_byte = frame[:, 0:image_bytes:5]
+    two_byte = frame[:, 1:image_bytes:5]
+    three_byte = frame[:, 2:image_bytes:5]
+    four_byte = frame[:, 3:image_bytes:5]
+    five_byte = frame[:, 4:image_bytes:5]
+    # 计算补偿的0值
+    if Align_num == 1:
+        two_byte = np.column_stack((two_byte, np.arange(1, ph_height + 1)))
+        three_byte = np.column_stack((three_byte, np.arange(1, ph_height + 1)))
+        four_byte = np.column_stack((four_byte, np.arange(1, ph_height + 1)))
+        five_byte = np.column_stack((five_byte, np.arange(1, ph_height + 1)))
+        print('Aligh is 1')
+    elif Align_num == 2:
+        three_byte = np.column_stack((three_byte, np.arange(1, ph_height + 1)))
+        four_byte = np.column_stack((four_byte, np.arange(1, ph_height + 1)))
+        five_byte = np.column_stack((five_byte, np.arange(1, ph_height + 1)))
+        print('Aligh is 2')
+    elif Align_num == 3:
+        four_byte = np.column_stack((four_byte, np.arange(1, ph_height + 1)))
+        five_byte = np.column_stack((five_byte, np.arange(1, ph_height + 1)))
+        print('Aligh is 3')
+    elif Align_num == 4:
+        five_byte = np.column_stack((five_byte, np.arange(1, ph_height + 1)))
+        print('Aligh is 4')
+    else:
+        print('That is not to Aligh')
+    # 数据转换防止溢出
+    one_byte = one_byte.astype('uint16')
+    two_byte = two_byte.astype('uint16')
+    three_byte = three_byte.astype('uint16')
+    four_byte = four_byte.astype('uint16')
+    five_byte = five_byte.astype('uint16')
+    # 用矩阵的方法进行像素的拼接
+    one_byte = np.left_shift(np.bitwise_and(two_byte, 3), 10) + np.left_shift(one_byte, 2)
+    two_byte = np.bitwise_and(two_byte, 252) + np.left_shift(np.bitwise_and(three_byte, 15), 8)
+    three_byte = np.right_shift(np.bitwise_and(three_byte, 240), 2) + np.left_shift(np.bitwise_and(four_byte, 63),
+                                                                                    6)
+    four_byte = np.right_shift(np.bitwise_and(four_byte, 192), 4) + np.left_shift(five_byte, 4)
+    # 整合各通道数据到一起
+    frame_pixels = np.zeros(shape=(ph_height, pw_width))
+    frame_pixels[:, 0:pw_width:4] = one_byte[:, 0:packet_num_L]
+    frame_pixels[:, 1:pw_width:4] = two_byte[:, 0:packet_num_L]
+    frame_pixels[:, 2:pw_width:4] = three_byte[:, 0:packet_num_L]
+    frame_pixels[:, 3:pw_width:4] = four_byte[:, 0:packet_num_L]
+    # 裁剪无用的数据
+    frame_out = frame_pixels[0:height, 0:width]
+    return frame_out
 
 
-"""
-def read_yuv_packed_word(frame_data, height, width):
-    width_size = width * 3 // 2  # 一行的数据数
-    h_w = width // 4  # 一行颜色数据数
-    # frame_yuv = np.zeros(shape=(height, width_size))
-    frame_yuv = frame_data // 4
-    frame_yuv = frame_yuv.reshape(height, width_size)
+def read_packed_word_cplane_12(file_path_name, height, width, ph_height, pw_width, bw_width):
+    print("exist PW PH and BW")
+    packet_num_L =(width + 3 )// 4
+    width_byte_num = packet_num_L * 5  # 当行byte长度
+    packet_num_L, Align_num = divmod(bw_width, 5)
+    image_bytes = bw_width * ph_height  # 获取图片真实的大小
+    frame = np.fromfile(file_path_name, count=image_bytes, dtype="uint8")
+    print("b shape", frame.shape)
+    print('%#x' % frame[0])
+    frame.shape = [ph_height, bw_width]  # 高字节整理图像矩阵
+    # 5字节读取数据
+    one_byte = frame[:, 0:image_bytes:5]
+    two_byte = frame[:, 1:image_bytes:5]
+    three_byte = frame[:, 2:image_bytes:5]
+    four_byte = frame[:, 3:image_bytes:5]
+    five_byte = frame[:, 4:image_bytes:5]
+    # 计算补偿的0值
+    if Align_num == 1:
+        two_byte = np.column_stack((two_byte, np.arange(1, ph_height + 1)))
+        three_byte = np.column_stack((three_byte, np.arange(1, ph_height + 1)))
+        four_byte = np.column_stack((four_byte, np.arange(1, ph_height + 1)))
+        five_byte = np.column_stack((five_byte, np.arange(1, ph_height + 1)))
+        print('Aligh is 1')
+    elif Align_num == 2:
+        three_byte = np.column_stack((three_byte, np.arange(1, ph_height + 1)))
+        four_byte = np.column_stack((four_byte, np.arange(1, ph_height + 1)))
+        five_byte = np.column_stack((five_byte, np.arange(1, ph_height + 1)))
+        print('Aligh is 2')
+    elif Align_num == 3:
+        four_byte = np.column_stack((four_byte, np.arange(1, ph_height + 1)))
+        five_byte = np.column_stack((five_byte, np.arange(1, ph_height + 1)))
+        print('Aligh is 3')
+    elif Align_num == 4:
+        five_byte = np.column_stack((five_byte, np.arange(1, ph_height + 1)))
+        print('Aligh is 4')
+    else:
+        print('That is not to Aligh')
+    # 数据转换防止溢出
+    one_byte = one_byte.astype('uint16')
+    two_byte = two_byte.astype('uint16')
+    three_byte = three_byte.astype('uint16')
+    four_byte = four_byte.astype('uint16')
+    five_byte = five_byte.astype('uint16')
+    # 用矩阵的方法进行像素的拼接
+    one_byte = np.left_shift(np.bitwise_and(two_byte, 3), 10) + np.left_shift(one_byte, 2)
+    two_byte = np.bitwise_and(two_byte, 252) + np.left_shift(np.bitwise_and(three_byte, 15), 8)
+    three_byte = np.right_shift(np.bitwise_and(three_byte, 240), 2) + np.left_shift(np.bitwise_and(four_byte, 63),
+                                                                                    6)
+    four_byte = np.right_shift(np.bitwise_and(four_byte, 192), 4) + np.left_shift(five_byte, 4)
+    # 整合各通道数据到一起
+    packet_num_L, Align_num = divmod(width_byte_num, 5)
+    frame_pixels = np.zeros(shape=(ph_height, width))
+    frame_pixels[:, 0:width:4] = one_byte[:, 0:packet_num_L]
+    frame_pixels[:, 1:width:4] = two_byte[:, 0:packet_num_L]
+    frame_pixels[:, 2:width:4] = three_byte[:, 0:packet_num_L]
+    frame_pixels[:, 3:width:4] = four_byte[:, 0:packet_num_L]
+    # 裁剪无用的数据
+    frame_out = frame_pixels[0:height, 0:width]
+    return frame_out
 
-    Yt = np.zeros(shape=(height, width))
-    Cb = np.zeros(shape=(height, h_w))
-    Cr = np.zeros(shape=(height, h_w))
-    #frame_yuv = frame_yuv.astype('uint16')
-    Yt[:, 0:width:4] = frame_yuv[:, 0:width_size:6]
-    Yt[:, 1:width:4] = frame_yuv[:, 2:width_size:6]
-    Yt[:, 2:width:4] = frame_yuv[:, 3:width_size:6]
-    Yt[:, 3:width:4] = frame_yuv[:, 5:width_size:6]
-    Cr[:, :] = frame_yuv[:, 1:width_size:6]
-    Cb[:, :] = frame_yuv[:, 4:width_size:6]
 
-    Cb = Cb.repeat(4, 1)
-    Cr = Cr.repeat(4, 1)
-
-    img_yuv = np.zeros(shape=(height, width, 3))
-    img_yuv[:, :, 0] = Yt[:, :]
-    img_yuv[:, :, 1] = Cb[:, :]
-    img_yuv[:, :, 2] = Cr[:, :]
-
-    rgb_img = np.zeros(shape=(height, width, 3)) rgb_img[:, :, 0] = 1.164 * (img_yuv[:, :, 0] - 16 * 4) + 1.596 * (
-    img_yuv[:, :, 2] - 128 * 4)  # R=Y+1.402*(Cr-128) # G = Y -0.344136*(Cr-128)-0.714136*(Cb-128) rgb_img[:, :, 
-    1] =1.164 * (img_yuv[:, :, 0] - 16 * 4) - 0.392 * (img_yuv[:, :, 1] - 128 * 4) -0.813 * (img_yuv[:, :, 
-    2] - 128 * 4) rgb_img[:, :, 2] =1.164 * (img_yuv[:, :, 0] - 16 * 4) + 2.017 * (img_yuv[:, :, 1] - 128 * 4)  # 
-    B=Y+1.772*(Cb - 128) rgb_img = np.clip(rgb_img, 0, 1023) rgb_img = rgb_img * 4 return rgb_img """
 """
 def test_case_read_packed_word():
 
