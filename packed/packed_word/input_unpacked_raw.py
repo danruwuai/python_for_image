@@ -6,7 +6,7 @@ import os
 import cv2 as cv
 import do_pure_raw
 import read_unpack_raw as read_unpackraw
-from matplotlib import pyplot as plt
+# from matplotlib import pyplot as plt
 
 
 # import raw_image_show as show
@@ -52,7 +52,7 @@ def load_raw():
         # show.raw_image_show_thumbnail(image, raw_height, raw_width)
         #do_pure_raw.histogram_show(frame_data, raw_bit)
         rgb_data = do_pure_raw.do_bayer_color(frame_data, raw_height, raw_width, raw_bayer)
-        rgb_data = do_pure_raw.do_black_level_correction(rgb_data, raw_bit)
+        # rgb_data = do_pure_raw.do_black_level_correction(rgb_data, raw_bit)
         # raw_image_show_fakecolor(rgb_data, raw_height, raw_width, raw_bit)
         frame_rgb = rgb_data / (2 ** (raw_bit - 8))
         # cv.imwrite(f'{raw_name}bmp', frame_raw)
@@ -63,6 +63,7 @@ def load_raw():
         print("################################################################")
 
 
+"""
 def raw_image_show_fakecolor(image, height, width, bits):
     x = width / 100
     y = height / 100
@@ -81,3 +82,4 @@ if __name__ == "__main__":
     print("################################################################")
 
     load_raw()
+"""

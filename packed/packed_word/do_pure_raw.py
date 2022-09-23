@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 # from pickle import FALSE
 import numpy as np
-from matplotlib import pyplot as plt
+# from matplotlib import pyplot as plt
 
 
 def do_black_level_correction(image, bits):
@@ -94,7 +94,7 @@ def bayer_channel_separation(data, pattern):
         return False
     return R, GR, GB, B
 
-
+"""
 def histogram_show(frame_data, bits):
     out = frame_data
     max = 2 ** bits - 1
@@ -102,3 +102,4 @@ def histogram_show(frame_data, bits):
     plt.figure(num='hist', figsize=(5, 6))
     plt.bar(range(len(hist)), hist)
     plt.show()
+"""

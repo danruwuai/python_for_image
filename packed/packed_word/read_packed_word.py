@@ -1,12 +1,10 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
 
-import raw_image_show as rawshow
 import numpy as np
 import math
 import os
 import cv2 as cv
-from matplotlib import pyplot as plt
 
 
 # 读取packed_word信息，返回数据和raw_name,准确的width
@@ -656,22 +654,3 @@ def read_packed_word_cplane_12(file_path_name, height, width, ph_height, pw_widt
     frame_out = frame_pixels[0:height, 0:width]
     return frame_out
 
-
-"""
-def test_case_read_packed_word():
-
-    file_name = "101907391-0060-0060-main-P1-IMGO-PW4672-PH2612-BW5840__4640x2612_10_2.packed_word"
-    image, raw_name, width = read_packed_word(file_name, 2612, 4640, 2)
-    image = image / 4095.0
-    plt.figure(num='test', figsize=(4640, 2612))
-    plt.imshow(image, interpolation='bicubic', vmax=1.0)
-    plt.xticks([]), plt.yticks([])
-    plt.show()
-    print('show')
-
-
-
-if __name__ == "__main__":
-    print('This is main of module')
-    test_case_read_packed_word()
-"""
