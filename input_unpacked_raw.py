@@ -7,6 +7,7 @@ import cv2 as cv
 import do_pure_raw
 import read_unpack_raw as read_unpackraw
 from matplotlib import pyplot as plt
+import do_sdblk
 
 
 # import raw_image_show as show
@@ -51,15 +52,33 @@ def load_raw():
         # image = frame_data / 4095.
         # show.raw_image_show_thumbnail(image, raw_height, raw_width)
         #do_pure_raw.histogram_show(frame_data, raw_bit)
-        rgb_data = do_pure_raw.do_bayer_color(frame_data, raw_height, raw_width, raw_bayer)
-        rgb_data = do_pure_raw.do_black_level_correction(rgb_data, raw_bit)
+        raw_name = file_raw[:file_raw.find('.')]
+        if 0:
+            # 输出csv数据
+            do_pure_raw.raw_to_csv(frame_data, raw_height, raw_width, raw_bayer, raw_name)
+        rggb_data = do_pure_raw.do_bayer_color(frame_data, raw_height, raw_width, raw_bayer)
+        # 输出pure_raw对应的bmp
+        pure_raw_rgb_data = do_pure_raw.rggb_to_rgb(rggb_data, raw_height, raw_width)
+        frame_rgb_pure = pure_raw_rgb_data / (2 ** (raw_bit - 8))
+        # cv.imwrite(f'{raw_name}bmp', frame_raw)
+        # imwrite默认输出的是BGR图片，所以需要RGB转换未BGR再输出。
+        frame_rgb_pure = frame_rgb_pure.astype(np.uint8)
+        cv.imwrite(f'{raw_name}_pure_raw.bmp', cv.cvtColor(frame_rgb_pure, cv.COLOR_RGBA2BGRA))
+        # pure_raw处理
+        rggb_data = do_pure_raw.do_black_level_correction(rggb_data, raw_bit)
+        lsc_mask = raw_name[:19]
+        print("lsc_mask:", lsc_mask)
+        rggb_data, lsc_flag = do_sdblk.do_lsc_for_raw(rggb_data, raw_height, raw_width, raw_bayer, lsc_mask)
+        if lsc_flag == False:
+            print("################################################################")
+            print("不存在对应的sdblk,不做LSC处理")
         # raw_image_show_fakecolor(rgb_data, raw_height, raw_width, raw_bit)
+        rgb_data = do_pure_raw.rggb_to_rgb(rggb_data, raw_height, raw_width)
         frame_rgb = rgb_data / (2 ** (raw_bit - 8))
         # cv.imwrite(f'{raw_name}bmp', frame_raw)
         # imwrite默认输出的是BGR图片，所以需要RGB转换未BGR再输出。
         frame_rgb = frame_rgb.astype(np.uint8)
-        raw_name = file_raw[:file_raw.find('.')]
-        cv.imwrite(raw_name + '.bmp', cv.cvtColor(frame_rgb, cv.COLOR_RGBA2BGRA))
+        cv.imwrite(f'{raw_name}_proc_raw.bmp', cv.cvtColor(frame_rgb, cv.COLOR_RGBA2BGRA))
         print("################################################################")
 
 

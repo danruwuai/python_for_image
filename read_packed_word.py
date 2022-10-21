@@ -7,6 +7,7 @@ import math
 import os
 import cv2 as cv
 from matplotlib import pyplot as plt
+import do_pure_raw
 
 
 # 读取packed_word信息，返回数据和raw_name,准确的width
@@ -192,6 +193,9 @@ def read_lsc_raw(file_path_name, height, width, bayer):
     """
     # 写入raw文件
     frame.tofile(raw_name + ".raw")
+    if 0:
+        # 输出csv数据
+        do_pure_raw.raw_to_csv(frame, height, width, bayer, raw_name)
     # 根据bayer转换raw
     rgb_img = np.zeros(shape=(height, width, 3))
     R = rgb_img[:, :, 0]
@@ -455,7 +459,7 @@ def do_ycbcr(frame_y, frame_cb, frame_cr, height, width, yuv_name):
     yuv_height = int(height * 1.5)
     yuv_nv21 = np.zeros(shape=(yuv_height, width))
     """
-    存储方式为，前height行存Y,后height/2行存储UV
+    存储方式为,前height行存Y,后height/2行存储UV
     Y Y Y Y
     Y Y Y Y
     Y Y Y Y

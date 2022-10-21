@@ -15,11 +15,11 @@ def do_black_level_correction(image, bits):
 
 
 def do_bayer_color(file_name, height, width, bayer):
-    rgb_img = np.zeros(shape=(height, width, 3))
-    R = rgb_img[:, :, 0]
-    GR = rgb_img[:, :, 1]
-    GB = rgb_img[:, :, 1]
-    B = rgb_img[:, :, 2]
+    rggb_img = np.zeros(shape=(height, width, 4))
+    R = rggb_img[:, :, 0]
+    GR = rggb_img[:, :, 1]
+    GB = rggb_img[:, :, 2]
+    B = rggb_img[:, :, 3]
     # 0:B 1:GB 2:GR 3:R
     if bayer in [3, "RGGB"]:
         R[::2, ::2] = file_name[::2, ::2]
@@ -44,6 +44,13 @@ def do_bayer_color(file_name, height, width, bayer):
     else:
         print("no match bayer")
         return False
+    return rggb_img
+
+def rggb_to_rgb(file_name, height, width):
+    rgb_img = np.zeros(shape=(height, width, 3))
+    rgb_img[:, :, 0] = file_name[:, :, 0]
+    rgb_img[:, :, 1] = file_name[:, :, 1] + file_name[:, :, 2]
+    rgb_img[:, :, 2] = file_name[:, :, 3]
     return rgb_img
 
 
@@ -102,3 +109,51 @@ def histogram_show(frame_data, bits):
     plt.figure(num='hist', figsize=(5, 6))
     plt.bar(range(len(hist)), hist)
     plt.show()
+
+
+def raw_to_csv(image, raw_height, raw_width, bayer, name):
+    height = raw_height // 2
+    width = raw_width // 2
+    # 创建CSV表格数据，内容赋值空
+    csv_data = np.full([4 * (height + 3), width], -1)
+    csv_data = csv_data.astype('str')
+    # 0:B 1:GB 2:GR 3:R
+    if bayer in [3, "RGGB"]:
+        R_data = image[::2, ::2]
+        GR_data = image[::2, 1::2]
+        GB_data = image[1::2, ::2]
+        B_data = image[1::2, 1::2]
+    elif bayer in [2, "GRBG"]:
+        GR_data = image[::2, ::2]
+        R_data = image[::2, 1::2]
+        B_data = image[1::2, ::2]
+        GB_data = image[1::2, 1::2]
+    elif bayer in [1, "GBRG"]:
+        GB_data = image[::2, ::2]
+        B_data = image[::2, 1::2]
+        R_data = image[1::2, ::2]
+        GR_data = image[1::2, 1::2]
+    elif bayer in [0, "BGGR"]:
+        B_data = image[::2, ::2]
+        GB_data = image[::2, 1::2]
+        GR_data = image[1::2, ::2]
+        R_data = image[1::2, 1::2]
+    else:
+        print("no match bayer")
+        return False
+    csv_data[0, 0] = 'R'
+    R_data = R_data.astype('str')
+    csv_data[1: height + 3 - 2, 0: width] = R_data
+    csv_data[height + 3, 0] = 'GR'
+    GR_data = GR_data.astype('str')
+    csv_data[height + 3 + 1: 2 * (height + 3) - 2, 0: width] = GR_data
+    csv_data[2 * (height + 3), 0] = 'GB'
+    GB_data = GB_data.astype('str')
+    csv_data[2 * (height + 3) + 1: 3 * (height + 3) - 2, 0: width] = GB_data
+    csv_data[3 * (height + 3), 0] = 'B'
+    B_data = B_data.astype('str')
+    csv_data[3 * (height + 3) + 1: 4 * (height + 3) - 2, 0: width] = B_data
+    # 替换csv_data数据里的-1为空
+    csv_data[csv_data == '-1'] = ''
+    np.savetxt(f'{name}.csv', csv_data, delimiter=",", fmt='%s')
+    print("输出raw统计数据:", f'{name}.csv')
