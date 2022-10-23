@@ -41,6 +41,68 @@ def raw_image_show_3D(image, height, width):
     print('show')
 
 
+def raw_image_show_lsc(lsc_R, lsc_GR, lsc_GB, lsc_B, height, width):
+
+    fig, ax = plt.subplots(2, 2, figsize=(10, 4.5))
+    X = np.arange(0, width)
+    Y = np.arange(0, height)
+    X, Y = np.meshgrid(X, Y)
+    ax[0][0].set_title('LSC_R')  # 设置标题
+    ax[0][0].axis('off')
+    ax[0][0] = fig.add_subplot(2, 2, 1, projection='3d')
+    ax[0][0].plot_wireframe(X, Y, lsc_R, rstride=10, cstride=10, color='r')
+    ax[0][1].set_title('LSC_GR')  # 设置标题
+    ax[0][1].axis('off')
+    ax[0][1] = fig.add_subplot(2, 2, 2, projection='3d')
+    ax[0][1].plot_wireframe(X, Y, lsc_GR, rstride=10, cstride=10, color='g')
+    ax[1][0].set_title('LSC_GB', y=-0.3)  # 设置标题
+    ax[1][0].axis('off')
+    ax[1][0] = fig.add_subplot(2, 2, 3, projection='3d')
+    ax[1][0].plot_wireframe(X, Y, lsc_GB, rstride=10, cstride=10, color='g')
+    ax[1][1].set_title('LSC_B', y=-0.3)  # 设置标题
+    ax[1][1].axis('off')
+    ax[1][1] = fig.add_subplot(2, 2, 4, projection='3d')
+    ax[1][1].plot_wireframe(X, Y, lsc_B, rstride=10, cstride=10, color='b')
+    plt.tight_layout(pad=0.5, w_pad=0.5, h_pad=2.0)
+    # 全屏显示
+    manager = plt.get_current_fig_manager()
+    manager.window.showMaximized()
+    plt.show()
+
+    # ax=Axes3d(fig)
+    """
+    ax = plt.subplot(2, 2, 1, projection='3d')
+    ax.set_title('LSC_R')  # 设置标题
+    plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0, hspace=0)
+    X = np.arange(0, width)
+    Y = np.arange(0, height)
+    X, Y = np.meshgrid(X, Y)
+    # R = np.sqrt(X ** 2 + Y ** 2)
+    # 具体函数方法可用help(function)查看，如：help（ax.plot_surface)
+    # ax.plot_surface(X,Y,Z,rstride=1,cstride=1,cmap='rainbow')
+    ax.plot_wireframe(X, Y, lsc_R, rstride=10, cstride=10, color='r')
+    ax = plt.subplot(2, 2, 2, projection='3d')
+    ax.set_title('LSC_GR')  # 设置标题
+    # 具体函数方法可用help(function)查看，如：help（ax.plot_surface)
+    # ax.plot_surface(X,Y,Z,rstride=1,cstride=1,cmap='rainbow')
+    ax.plot_wireframe(X, Y, lsc_GR, rstride=10, cstride=10, color='g')
+    ax = plt.subplot(2, 2, 3, projection='3d')
+    ax.set_title('LSC_GB', y=-0.3)  # 设置标题
+    # 具体函数方法可用help(function)查看，如：help（ax.plot_surface)
+    # ax.plot_surface(X,Y,Z,rstride=1,cstride=1,cmap='rainbow')
+    ax.plot_wireframe(X, Y, lsc_GB, rstride=10, cstride=10, color='g')
+    ax = plt.subplot(2, 2, 4, projection='3d')
+    ax.set_title('LSC_B', y=-0.3)  # 设置标题
+    # 具体函数方法可用help(function)查看，如：help（ax.plot_surface)
+    # ax.plot_surface(X,Y,Z,rstride=1,cstride=1,cmap='rainbow')
+    ax.plot_wireframe(X, Y, lsc_B, rstride=10, cstride=10, color='b')
+    manager = plt.get_current_fig_manager()
+    manager.window.showMaximized()
+    plt.tight_layout(pad=0.5, w_pad=0.5, h_pad=2.0)
+    plt.show()
+    """
+    print('show')
+
 # 黑白小尺寸show
 def raw_image_show_thumbnail(image, height, width):
     x = width / 800

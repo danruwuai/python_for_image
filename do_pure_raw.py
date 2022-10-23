@@ -15,11 +15,11 @@ def do_black_level_correction(image, bits):
 
 
 def do_bayer_color(file_name, height, width, bayer):
-    rggb_img = np.zeros(shape=(height, width, 4))
-    R = rggb_img[:, :, 0]
-    GR = rggb_img[:, :, 1]
-    GB = rggb_img[:, :, 2]
-    B = rggb_img[:, :, 3]
+    rgb_img = np.zeros(shape=(height, width, 4))
+    R = rgb_img[:, :, 0]
+    GR = rgb_img[:, :, 1]
+    GB = rgb_img[:, :, 1]
+    B = rgb_img[:, :, 2]
     # 0:B 1:GB 2:GR 3:R
     if bayer in [3, "RGGB"]:
         R[::2, ::2] = file_name[::2, ::2]
@@ -44,13 +44,6 @@ def do_bayer_color(file_name, height, width, bayer):
     else:
         print("no match bayer")
         return False
-    return rggb_img
-
-def rggb_to_rgb(file_name, height, width):
-    rgb_img = np.zeros(shape=(height, width, 3))
-    rgb_img[:, :, 0] = file_name[:, :, 0]
-    rgb_img[:, :, 1] = file_name[:, :, 1] + file_name[:, :, 2]
-    rgb_img[:, :, 2] = file_name[:, :, 3]
     return rgb_img
 
 
@@ -100,6 +93,44 @@ def bayer_channel_separation(data, pattern):
         print("pattern must be one of ： RGGB GRBG GBRG BGGR or 0 1 2 3")
         return False
     return R, GR, GB, B
+
+
+def bayer_channel_integrration(R, GR, GB, B, pattern):
+    # ----------------------------------------------------------------
+    #   Objective: combin data into a raw according to pattern
+    #   Input：
+    #       R, GR, GB, B：   the four separate channels (Quarter resolution)
+    #       pattern:    RGGB, GBRG, GBRG, BGGR or 0 1 2 3
+    #   Output:
+    #       data (Full resolution image)
+    # ----------------------------------------------------------------
+    size = np.shape(R)
+    data = np.empty((size[0] * 2, size[1] * 2), dtype=np.float32)
+    if pattern in [3, "RGGB"]:
+        data[::2, ::2] = R
+        data[::2, 1::2] = GR
+        data[1::2, ::2] = GB
+        data[1::2, 1::2] = B
+    elif pattern in [2, "GRBG"]:
+        data[::2, ::2] = GR
+        data[::2, 1::2] = R
+        data[1::2, ::2] = B
+        data[1::2, 1::2] = GB
+    elif pattern in [1, "GBRG"]:
+        data[::2, ::2] = GB
+        data[::2, 1::2] = B
+        data[1::2, ::2] = R
+        data[1::2, 1::2] = GR
+    elif pattern in [0, "BGGR"]:
+        data[::2, ::2] = B
+        data[::2, 1::2] = GB
+        data[1::2, ::2] = GR
+        data[1::2, 1::2] = R
+    else:
+        print("no match pattern")
+        print("pattern must be one of ： RGGB GRBG GBRG BGGR or 0 1 2 3")
+        return False
+    return data
 
 
 def histogram_show(frame_data, bits):
