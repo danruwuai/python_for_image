@@ -67,8 +67,8 @@ def pure_raw_isp(image, raw_height, raw_width, raw_bit, raw_bayer, raw_name):
     cv.imwrite(f'{raw_name}_pure_raw.bmp', cv.cvtColor(frame_rgb_pure, cv.COLOR_RGBA2BGRA))
     # 去马赛克处理
     # frame_cfa_rgb = demosaic.AHD(image, raw_bayer)
-    # frame_cfa_rgb = demosaic.AH_demosaic(image, raw_bayer)
-    frame_cfa_rgb = demosaic.blinnear(image, raw_bayer)
+    frame_cfa_rgb = demosaic.AH_demosaic(image, raw_bayer)
+    # frame_cfa_rgb = demosaic.blinnear(image, raw_bayer)
     frame_cfa_rgb = frame_cfa_rgb / (2 ** (raw_bit - 8))
     frame_cfa_rgb = np.clip(frame_cfa_rgb, a_min=0, a_max=255)
     frame_cfa_rgb = frame_cfa_rgb.astype(np.uint8)

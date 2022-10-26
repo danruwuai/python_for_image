@@ -2,6 +2,32 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import signal
 import read_unpack_raw
+import threading
+import queue
+
+
+class Task:
+    def __init__(self, priority, description):
+        self.priority = priority
+        self.description = description
+        # print("New Job:", description)
+        return
+
+    def __eq__(self, other):
+        try:
+            return self.priority == other.priority
+        except AttributeError:
+            return NotImplemented
+
+    def __lt__(self, other):
+        try:
+            return self.priority < other.priority
+        except AttributeError:
+            return NotImplemented
+
+
+queueLock = threading.Lock()
+workQueue = queue.PriorityQueue()
 
 
 def masks_Bayer(im, pattern):
@@ -85,27 +111,27 @@ def AH_gradient(img, pattern):
 
 
 def AH_gradientX(img, pattern):
-
     Ga = AH_gradient(img, pattern)
-
+    workQueue.put(Task(3, Ga))
     return Ga
 
 
 def AH_gradientY(img, pattern):
     if pattern in [3, "RGGB"]:
-        new_pattern = 3         # "RGGB"
+        new_pattern = 3  # "RGGB"
     elif pattern in [2, "GRBG"]:
-        new_pattern = 1         # "GBRG"
+        new_pattern = 1  # "GBRG"
     elif pattern in [1, "GBRG"]:
-        new_pattern = 2         # "GRBG"
+        new_pattern = 2  # "GRBG"
     elif pattern in [0, "BGGR"]:
-        new_pattern = 0         # "BGGR"
+        new_pattern = 0  # "BGGR"
     else:
         print("no match bayer")
         return False
     new_img = img.T
     Ga = AH_gradient(new_img, new_pattern)
     new_Ga = Ga.T
+    workQueue.put(Task(4, new_Ga))
     return new_Ga
 
 
@@ -114,21 +140,23 @@ def AH_interpolate(img, pattern, gamma):
     X = img
     Rm, Gm, Bm = masks_Bayer(img, pattern)
     # green
-    Hg1 = np.array([0, 1/2, 0, 1/2, 0])
-    Hg2 = np.array([-1/4, 0, 1/2, 0, -1/4])
+    Hg1 = np.array([0, 1 / 2, 0, 1 / 2, 0])
+    Hg2 = np.array([-1 / 4, 0, 1 / 2, 0, -1 / 4])
     Hg = Hg1 + Hg2 * gamma
     Hg = Hg.reshape(1, -1)
     G = Gm * X + (Rm + Bm) * signal.convolve(X, Hg, 'same')
     # Gy = Gy.reshape(1, -1)
     # res = signal.convolve(h, Gy, mode="same")
     # red / bule
-    Hr = [[1/4, 1/2, 1/4], [1/2, 1, 1/2], [1/4, 1/2, 1/4]]
+    Hr = [[1 / 4, 1 / 2, 1 / 4], [1 / 2, 1, 1 / 2], [1 / 4, 1 / 2, 1 / 4]]
     R = G + signal.convolve(Rm * (X - G), Hr, 'same')
     B = G + signal.convolve(Bm * (X - G), Hr, 'same')
+    """
     max_value = 4096
     R = np.clip(R, 0, max_value)
     G = np.clip(G, 0, max_value)
     B = np.clip(B, 0, max_value)
+    """
 
     R = R.astype(np.uint16)
     G = G.astype(np.uint16)
@@ -145,6 +173,7 @@ def AH_interpolateX(img, pattern, gamma):
     Y[:, :, 0] = R
     Y[:, :, 1] = G
     Y[:, :, 2] = B
+    workQueue.put(Task(1, Y))
     return Y
 
 
@@ -153,13 +182,13 @@ def AH_interpolateY(img, pattern, gamma):
     h, w = img.shape
     Y = np.zeros((h, w, 3))
     if pattern in [3, "RGGB"]:
-        new_pattern = 3         # "RGGB"
+        new_pattern = 3  # "RGGB"
     elif pattern in [2, "GRBG"]:
-        new_pattern = 1         # "GBRG"
+        new_pattern = 1  # "GBRG"
     elif pattern in [1, "GBRG"]:
-        new_pattern = 2         # "GRBG"
+        new_pattern = 2  # "GRBG"
     elif pattern in [0, "BGGR"]:
-        new_pattern = 0         # "BGGR"
+        new_pattern = 0  # "BGGR"
     else:
         print("no match bayer")
         return False
@@ -169,16 +198,17 @@ def AH_interpolateY(img, pattern, gamma):
     Y[:, :, 0] = R.T
     Y[:, :, 1] = G.T
     Y[:, :, 2] = B.T
+    workQueue.put(Task(2, Y))
     return Y
 
 
 def MNballset(delta):
     index = delta
-    H = np.zeros((index*2 + 1, index*2 + 1, (index*2 + 1)**2))
+    H = np.zeros((index * 2 + 1, index * 2 + 1, (index * 2 + 1) ** 2))
 
     k = 0
-    for i in range(-index, index+1):
-        for j in range(-index, index+1):
+    for i in range(-index, index + 1):
+        for j in range(-index, index + 1):
             p = np.linalg.norm([i, j])
             H[index + 1, index + j, k] = 1
             k = k + 1
@@ -197,11 +227,17 @@ def MNparamA(YxLAB, YyLAB):
     kernel_V2 = kernel_H2.reshape(1, -1).T
     xxx = np.abs(signal.convolve(X[:, :, 0], kernel_H1, 'same'))
     yyy = np.abs(signal.convolve(X[:, :, 0], kernel_H2, 'same'))
-    eLM1 = np.maximum(np.abs(signal.convolve(X[:, :, 0], kernel_H1, 'same')), np.abs(signal.convolve(X[:, :, 0], kernel_H2, 'same')))
-    eLM2 = np.maximum(np.abs(signal.convolve(Y[:, :, 0], kernel_V1, 'same')), abs(signal.convolve(Y[:, :, 0], kernel_V2, 'same')))
+    eLM1 = np.maximum(np.abs(signal.convolve(X[:, :, 0], kernel_H1, 'same')),
+                      np.abs(signal.convolve(X[:, :, 0], kernel_H2, 'same')))
+    eLM2 = np.maximum(np.abs(signal.convolve(Y[:, :, 0], kernel_V1, 'same')),
+                      abs(signal.convolve(Y[:, :, 0], kernel_V2, 'same')))
     eL = np.minimum(eLM1, eLM2)
-    eCx = np.maximum(signal.convolve(X[:, :, 1], kernel_H1, 'same') ** 2 + signal.convolve(X[:, :, 2], kernel_H1, 'same')**2, signal.convolve(X[:, :, 1], kernel_H2, 'same')**2, signal.convolve(X[:, :, 2], kernel_H2, 'same')**2)
-    eCy = np.maximum(signal.convolve(Y[:, :, 1], kernel_V2, 'same') ** 2 + signal.convolve(Y[:, :, 2], kernel_V2, 'same')**2, signal.convolve(Y[:, :, 1], kernel_V1, 'same')**2, signal.convolve(Y[:, :, 2], kernel_V1, 'same')**2)
+    eCx = np.maximum(
+        signal.convolve(X[:, :, 1], kernel_H1, 'same') ** 2 + signal.convolve(X[:, :, 2], kernel_H1, 'same') ** 2,
+        signal.convolve(X[:, :, 1], kernel_H2, 'same') ** 2, signal.convolve(X[:, :, 2], kernel_H2, 'same') ** 2)
+    eCy = np.maximum(
+        signal.convolve(Y[:, :, 1], kernel_V2, 'same') ** 2 + signal.convolve(Y[:, :, 2], kernel_V2, 'same') ** 2,
+        signal.convolve(Y[:, :, 1], kernel_V1, 'same') ** 2, signal.convolve(Y[:, :, 2], kernel_V1, 'same') ** 2)
     eC = np.minimum(eCx, eCy)
     eL = eL
     eC = eC ** 0.5
@@ -221,7 +257,8 @@ def MNhomogeneity(LAB_image, delta, epsilonL, epsilonC):
     # 注意浮点数精度可能会有影响
     for i in range(kc):
         L = np.abs(signal.convolve(X[:, :, 0], H[:, :, i], 'same') - X[:, :, 0]) <= epsilonL  # level set
-        C = ((signal.convolve(X[:, :, 1], H[:, :, i], 'same') - X[:, :, 1])**2 + (signal.convolve(X[:, :, 2], H[:, :, i], 'same')-X[:, :, 2])**2) / 2 <= epsilonC_sq
+        C = ((signal.convolve(X[:, :, 1], H[:, :, i], 'same') - X[:, :, 1]) ** 2 + (
+                    signal.convolve(X[:, :, 2], H[:, :, i], 'same') - X[:, :, 2]) ** 2) / 2 <= epsilonC_sq
         U = C & L  # metric neighborhold
         K = K + U  # homogeneity
     return K
@@ -229,7 +266,6 @@ def MNhomogeneity(LAB_image, delta, epsilonL, epsilonC):
 
 # 去artifact
 def MNartifact(R, G, B, iteartions):
-
     h, w = R.shape
     Rt = np.zeros((h, w, 8))
     Bt = np.zeros((h, w, 8))
@@ -305,18 +341,43 @@ def AH_demosaic(img, pattern, gamma=1):
     f = np.pad(img, ((imgs, imgs), (imgs, imgs)), 'reflect')
     # Yx = AH_interpolateX(f, pattern, gamma, max_value)
     # Yy = AH_interpolateY(f, pattern, gamma, max_value)
+    """
     Yx = AH_interpolateX(f, pattern, gamma)
     Yy = AH_interpolateY(f, pattern, gamma)
     Hx = AH_gradientX(f, pattern)
     Hy = AH_gradientY(f, pattern)
+    """
+    # 创建线程并初始化线程
+    t1 = threading.Thread(target=AH_interpolateX, args=(f, pattern, gamma))
+    t2 = threading.Thread(target=AH_interpolateY, args=(f, pattern, gamma))
+    t3 = threading.Thread(target=AH_gradientX, args=(f, pattern))
+    t4 = threading.Thread(target=AH_gradientY, args=(f, pattern))
+    t1.start()
+    t2.start()
+    t3.start()
+    t4.start()
+    t1.join()
+    t2.join()
+    t3.join()
+    t4.join()
+    Yx = workQueue.get()
+    Yy = workQueue.get()
+    Hx = workQueue.get()
+    Hy = workQueue.get()
+    """
+    print(Yx.description)
+    print(Hy.description)
+    print(Hx.description)
+    print(Hx.description)
+    """
     # set output to Yy if Hy >= Hx
-    bigger_index = np.where(Hy <= Hx)
-    R = Yx[:, :, 0]
-    G = Yx[:, :, 1]
-    B = Yx[:, :, 2]
-    Ry = Yy[:, :, 0]
-    Gy = Yy[:, :, 1]
-    By = Yy[:, :, 2]
+    bigger_index = np.where(Hy.description <= Hx.description)
+    R = Yx.description[:, :, 0]
+    G = Yx.description[:, :, 1]
+    B = Yx.description[:, :, 2]
+    Ry = Yy.description[:, :, 0]
+    Gy = Yy.description[:, :, 1]
+    By = Yy.description[:, :, 2]
     Rs = R
     Gs = G
     Bs = B
@@ -347,11 +408,20 @@ def AHD(img, pattern, delta=2, gamma=1, max_value=255):
     f = np.pad(img, ((imgs, imgs), (imgs, imgs)), 'reflect')
     # Yx = AH_interpolateX(f, pattern, gamma, max_value)
     # Yy = AH_interpolateY(f, pattern, gamma, max_value)
-    Yx = AH_interpolateX(f, pattern, gamma)
-    Yy = AH_interpolateY(f, pattern, gamma)
+    # Yx = AH_interpolateX(f, pattern, gamma)
+    # Yy = AH_interpolateY(f, pattern, gamma)
+    # 创建线程并初始化线程
+    t1 = threading.Thread(target=AH_interpolateX, args=(f, pattern, gamma))
+    t2 = threading.Thread(target=AH_interpolateY, args=(f, pattern, gamma))
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
+    Yx = workQueue.get()
+    Yy = workQueue.get()
     # 转LAB
-    YxLAB = RGB2LAB(Yx)
-    YyLAB = RGB2LAB(Yy)
+    YxLAB = RGB2LAB(Yx.description)
+    YyLAB = RGB2LAB(Yy.description)
     # 色彩差异的运算
     epsilonL, epsilonC = MNparamA(YxLAB, YyLAB)
     Hx = MNhomogeneity(YxLAB, delta, epsilonL, epsilonC)
@@ -361,12 +431,12 @@ def AHD(img, pattern, delta=2, gamma=1, max_value=255):
     Hy = signal.convolve(Hy, f_kernel, 'same')
     # 选择X, Y
     # set output initially to Yx
-    R = Yx[:, :, 0]
-    G = Yx[:, :, 1]
-    B = Yx[:, :, 2]
-    Ry = Yy[:, :, 0]
-    Gy = Yy[:, :, 1]
-    By = Yy[:, :, 2]
+    R = Yx.description[:, :, 0]
+    G = Yx.description[:, :, 1]
+    B = Yx.description[:, :, 2]
+    Ry = Yy.description[:, :, 0]
+    Gy = Yy.description[:, :, 1]
+    By = Yy.description[:, :, 2]
     bigger_index = np.where(Hy >= Hx)
     Rs = R
     Gs = G
@@ -397,9 +467,9 @@ def AHD(img, pattern, delta=2, gamma=1, max_value=255):
 
 # internal function
 def labf(t):
-    d = t**(1/3)
+    d = t ** (1 / 3)
     index = np.where(t <= 0.008856)
-    d[index] = 7.787*t[index] + 16/116
+    d[index] = 7.787 * t[index] + 16 / 116
     return d
 
 
@@ -444,15 +514,17 @@ def test_AHD_demosaic():
     w = 3264
     h = 2448
     img = read_unpack_raw.read_unpack_file(file_name, h, w, bit)
-    result = AHD(img, pattern)
+    # result = AHD(img, pattern)
+    result = AH_demosaic(img, pattern)
     height, width = img.shape
     x = width / 100
     y = height / 100
     plt.figure(num='test', figsize=(x, y))
-    plt.imshow(result/maxvalue, interpolation='bicubic', vmax=1.0)
+    plt.imshow(result / maxvalue, interpolation='bicubic', vmax=1.0)
     plt.xticks([]), plt.yticks([])
     plt.show()
     return
+
 
 if __name__ == '__main__':
     test_AHD_demosaic()
