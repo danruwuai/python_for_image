@@ -1,13 +1,17 @@
 import time
 from multiprocessing import Process, Queue, Lock
+
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import signal
+
 import read_unpack_raw
+
+"""
 import threading
 import queue
 
-"""
+
 class Task:
     def __init__(self, priority, description):
         self.priority = priority
@@ -26,6 +30,10 @@ class Task:
             return self.priority < other.priority
         except AttributeError:
             return NotImplemented
+
+
+queueLock = threading.Lock()
+workQueue = queue.PriorityQueue()
 """
 
 
@@ -102,16 +110,18 @@ def AH_gradient(img, pattern):
 
     Hg1 = Hg1.reshape(1, -1)
     Hg2 = Hg2.reshape(1, -1)
-    Hg1 = Hg1.astype(np.float)
-    Hg2 = Hg2.astype(np.float)
+    Hg1 = Hg1.astype(np.float64)
+    Hg2 = Hg2.astype(np.float64)
     Ga = (Rm + Gm) * (np.abs(signal.convolve(X, Hg1, 'same')) + np.abs(signal.convolve(X, Hg2, 'same')))
 
     return Ga
 
 
 def AH_gradientX(img, pattern, q, lock):
+    print("333333333333333333333333", time.time())
     Ga = AH_gradient(img, pattern)
-
+    # workQueue.put(Task(3, Ga))
+    print("333333333333333333333333", time.time())
     try:
         lock.acquire()
         # q.put({"Hx": Ga}, block=True, timeout=3)
@@ -119,10 +129,12 @@ def AH_gradientX(img, pattern, q, lock):
         lock.release()
     except q.Full:
         print('任务%d: 队列已满，写入失败')
+    print("333333333333333333333333", time.time())
     return Ga
 
 
 def AH_gradientY(img, pattern, q, lock):
+    print("44444444444444444444444444444", time.time())
     if pattern in [3, "RGGB"]:
         new_pattern = 3  # "RGGB"
     elif pattern in [2, "GRBG"]:
@@ -137,6 +149,8 @@ def AH_gradientY(img, pattern, q, lock):
     new_img = img.T
     Ga = AH_gradient(new_img, new_pattern)
     new_Ga = Ga.T
+    # workQueue.put(Task(4, new_Ga))
+    print("44444444444444444444444444444", time.time())
     try:
         lock.acquire()
         # q.put({"Hy": new_Ga}, block=True, timeout=3)
@@ -144,6 +158,7 @@ def AH_gradientY(img, pattern, q, lock):
         lock.release()
     except q.Full:
         print('任务%d: 队列已满，写入失败')
+    print("44444444444444444444444444444", time.time())
     return new_Ga
 
 
@@ -180,6 +195,7 @@ def AH_interpolate(img, pattern, gamma):
 
 # def AH_interpolateX(img, pattern, gamma, max_value):
 def AH_interpolateX(img, pattern, gamma, q, lock):
+    print("1111111111111111111111111", time.time())
     h, w = img.shape
     Y = np.zeros((h, w, 3))
     # R, G, B = AH_interpolate(img, pattern, gamma, max_value)
@@ -187,6 +203,8 @@ def AH_interpolateX(img, pattern, gamma, q, lock):
     Y[:, :, 0] = R
     Y[:, :, 1] = G
     Y[:, :, 2] = B
+    # workQueue.put(Task(1, Y))
+    print("1111111111111111111111111", time.time())
     try:
         lock.acquire()
         # q.put({"Yx": Y}, block=True, timeout=3)
@@ -194,11 +212,13 @@ def AH_interpolateX(img, pattern, gamma, q, lock):
         lock.release()
     except q.Full:
         print('任务%d: 队列已满，写入失败')
+    print("1111111111111111111111111", time.time())
     return Y
 
 
 # def AH_interpolateY(img, pattern, gamma, max_value):
 def AH_interpolateY(img, pattern, gamma, q, lock):
+    print("222222222222222222", time.time())
     h, w = img.shape
     Y = np.zeros((h, w, 3))
     if pattern in [3, "RGGB"]:
@@ -218,6 +238,8 @@ def AH_interpolateY(img, pattern, gamma, q, lock):
     Y[:, :, 0] = R.T
     Y[:, :, 1] = G.T
     Y[:, :, 2] = B.T
+    # workQueue.put(Task(2, Y))
+    print("222222222222222222", time.time())
     try:
         lock.acquire()
         # q.put({"Yy": Y}, block=True, timeout=3)
@@ -225,6 +247,7 @@ def AH_interpolateY(img, pattern, gamma, q, lock):
         lock.release()
     except q.Full:
         print('任务%d: 队列已满，写入失败')
+    print("22222222222222222222", time.time())
     return Y
 
 
@@ -253,76 +276,17 @@ def MNparamA(YxLAB, YyLAB):
     kernel_V2 = kernel_H2.reshape(1, -1).T
     # xxx = np.abs(signal.convolve(X[:, :, 0], kernel_H1, 'same'))
     # yyy = np.abs(signal.convolve(X[:, :, 0], kernel_H2, 'same'))
-    MNlock = threading.Lock()
-    MNq = queue.Queue()
-    name1 = 'X0_h1'
-    name2 = 'X0_h2'
-    name3 = 'Y0_v1'
-    name4 = 'Y0_v2'
-    name5 = 'X1_h1'
-    name6 = 'X2_h1'
-    name7 = 'X1_h2'
-    name8 = 'X2_h2'
-    name9 = 'Y1_v2'
-    name10 = 'Y2_v2'
-    name11 = 'Y1_v1'
-    name12 = 'Y2_v1'
-    t1 = threading.Thread(target=cal_convolve, args=(X[:, :, 0], kernel_H1, name1, MNq, MNlock))
-    t2 = threading.Thread(target=cal_convolve, args=(X[:, :, 0], kernel_H2, name2, MNq, MNlock))
-    t3 = threading.Thread(target=cal_convolve, args=(Y[:, :, 0], kernel_V1, name3, MNq, MNlock))
-    t4 = threading.Thread(target=cal_convolve, args=(Y[:, :, 0], kernel_V2, name4, MNq, MNlock))
-    t5 = threading.Thread(target=cal_convolve, args=(X[:, :, 1], kernel_H1, name5, MNq, MNlock))
-    t6 = threading.Thread(target=cal_convolve, args=(X[:, :, 2], kernel_H1, name6, MNq, MNlock))
-    t7 = threading.Thread(target=cal_convolve, args=(X[:, :, 1], kernel_H2, name7, MNq, MNlock))
-    t8 = threading.Thread(target=cal_convolve, args=(X[:, :, 2], kernel_H2, name8, MNq, MNlock))
-    t9 = threading.Thread(target=cal_convolve, args=(Y[:, :, 1], kernel_V2, name9, MNq, MNlock))
-    t10 = threading.Thread(target=cal_convolve, args=(Y[:, :, 2], kernel_V2, name10, MNq, MNlock))
-    t11 = threading.Thread(target=cal_convolve, args=(Y[:, :, 1], kernel_V1, name11, MNq, MNlock))
-    t12 = threading.Thread(target=cal_convolve, args=(Y[:, :, 2], kernel_V1, name12, MNq, MNlock))
-    t1.start()
-    t2.start()
-    t3.start()
-    t4.start()
-    t5.start()
-    t6.start()
-    t7.start()
-    t8.start()
-    t9.start()
-    t10.start()
-    t11.start()
-    t12.start()
-    t1.join()
-    t2.join()
-    t3.join()
-    t4.join()
-    t5.join()
-    t6.join()
-    t7.join()
-    t8.join()
-    t9.join()
-    t10.join()
-    t11.join()
-    t12.join()
-    dict1 = {}
-    for i in range(MNq.qsize()):
-        dict1.update(MNq.get())
-    X0_h1 = dict1['X0_h1']
-    X0_h2 = dict1['X0_h2']
-    Y0_v1 = dict1['Y0_v1']
-    Y0_v2 = dict1['Y0_v2']
-    X1_h1 = dict1['X1_h1']
-    X2_h1 = dict1['X2_h1']
-    X1_h2 = dict1['X1_h2']
-    X2_h2 = dict1['X2_h2']
-    Y1_v2 = dict1['Y1_v2']
-    Y2_v2 = dict1['Y2_v2']
-    Y1_v1 = dict1['Y1_v1']
-    Y2_v1 = dict1['Y2_v1']
-    eLM1 = np.maximum(np.abs(X0_h1), np.abs(X0_h2),)
-    eLM2 = np.maximum(np.abs(Y0_v1), np.abs(Y0_v2),)
+    eLM1 = np.maximum(np.abs(signal.convolve(X[:, :, 0], kernel_H1, 'same')),
+                      np.abs(signal.convolve(X[:, :, 0], kernel_H2, 'same')))
+    eLM2 = np.maximum(np.abs(signal.convolve(Y[:, :, 0], kernel_V1, 'same')),
+                      abs(signal.convolve(Y[:, :, 0], kernel_V2, 'same')))
     eL = np.minimum(eLM1, eLM2)
-    eCx = np.maximum(X1_h1 ** 2 + X2_h1 ** 2, X1_h2 ** 2 + X2_h2 ** 2)
-    eCy = np.maximum(Y1_v2 ** 2 + Y2_v2 ** 2, Y1_v1 ** 2 + Y2_v1 ** 2)
+    eCx = np.maximum(
+        signal.convolve(X[:, :, 1], kernel_H1, 'same') ** 2 + signal.convolve(X[:, :, 2], kernel_H1, 'same') ** 2,
+        signal.convolve(X[:, :, 1], kernel_H2, 'same') ** 2, signal.convolve(X[:, :, 2], kernel_H2, 'same') ** 2)
+    eCy = np.maximum(
+        signal.convolve(Y[:, :, 1], kernel_V2, 'same') ** 2 + signal.convolve(Y[:, :, 2], kernel_V2, 'same') ** 2,
+        signal.convolve(Y[:, :, 1], kernel_V1, 'same') ** 2, signal.convolve(Y[:, :, 2], kernel_V1, 'same') ** 2)
     eC = np.minimum(eCx, eCy)
     eL = eL
     eC = eC ** 0.5
@@ -331,6 +295,7 @@ def MNparamA(YxLAB, YyLAB):
 
 # 计算相似度f
 def MNhomogeneity(LAB_image, delta, epsilonL, epsilonC, name, q, lock):
+    print("333333333333333333333333", name, time.time())
     index = delta
     H = MNballset(delta)
     X = LAB_image
@@ -343,9 +308,10 @@ def MNhomogeneity(LAB_image, delta, epsilonL, epsilonC, name, q, lock):
     for i in range(kc):
         L = np.abs(signal.convolve(X[:, :, 0], H[:, :, i], 'same') - X[:, :, 0]) <= epsilonL  # level set
         C = ((signal.convolve(X[:, :, 1], H[:, :, i], 'same') - X[:, :, 1]) ** 2 + (
-                    signal.convolve(X[:, :, 2], H[:, :, i], 'same') - X[:, :, 2]) ** 2) <= epsilonC_sq
+                signal.convolve(X[:, :, 2], H[:, :, i], 'same') - X[:, :, 2]) ** 2) / 2 <= epsilonC_sq
         U = C & L  # metric neighborhold
         K = K + U  # homogeneity
+    print("333333333333333333333333", name, time.time())
     try:
         lock.acquire()
         # q.put({"Yy": Y}, block=True, timeout=3)
@@ -353,6 +319,7 @@ def MNhomogeneity(LAB_image, delta, epsilonL, epsilonC, name, q, lock):
         lock.release()
     except q.Full:
         print('任务%d: 队列已满，写入失败')
+    print("333333333333333333333333", name, time.time())
     return K
 
 
@@ -417,25 +384,11 @@ def MNartifact(R, G, B, iteartions):
     return R, G, B
 
 
-def cal_convolve(in1, kernel, name, q, lock):
-    out1 = signal.convolve(in1, kernel, 'same')
-    print(name)
-    try:
-        lock.acquire()
-        # q.put({"Yy": Y}, block=True, timeout=3)
-        q.put({name: out1})
-        lock.release()
-    except q.Full:
-        print('任务%d: 队列已满，写入失败')
-
-
 # adams hamilton
 # def AH_demosaic(img, pattern, gamma=1, max_value=255):
 def AH_demosaic(img, pattern, gamma=1):
-    queueLock = threading.Lock()
-    workQueue = queue.Queue()
-    # 转换为float，便于后边计算
-    img = img.astype(np.float)
+    # 转换为flat，便于后边计算
+    img = img.astype(np.float64)
     print("AH demosic start")
     imgh, imgw = img.shape
     imgs = 10
@@ -453,11 +406,12 @@ def AH_demosaic(img, pattern, gamma=1):
     Hx = AH_gradientX(f, pattern)
     Hy = AH_gradientY(f, pattern)
     """
+    """
     # 创建线程并初始化线程
-    t1 = threading.Thread(target=AH_interpolateX, args=(f, pattern, gamma, workQueue, queueLock))
-    t2 = threading.Thread(target=AH_interpolateY, args=(f, pattern, gamma, workQueue, queueLock))
-    t3 = threading.Thread(target=AH_gradientX, args=(f, pattern, workQueue, queueLock))
-    t4 = threading.Thread(target=AH_gradientY, args=(f, pattern, workQueue, queueLock))
+    t1 = threading.Thread(target=AH_interpolateX, args=(f, pattern, gamma))
+    t2 = threading.Thread(target=AH_interpolateY, args=(f, pattern, gamma))
+    t3 = threading.Thread(target=AH_gradientX, args=(f, pattern))
+    t4 = threading.Thread(target=AH_gradientY, args=(f, pattern))
     t1.start()
     t2.start()
     t3.start()
@@ -466,21 +420,65 @@ def AH_demosaic(img, pattern, gamma=1):
     t2.join()
     t3.join()
     t4.join()
+    Yx = workQueue.get()
+    Yy = workQueue.get()
+    Hx = workQueue.get()
+    Hy = workQueue.get()
+    """
     """
     print(Yx.description)
     print(Hy.description)
     print(Hx.description)
     print(Hx.description)
+
+    # set output to Yy if Hy >= Hx
+    bigger_index = np.where(Hy.description <= Hx.description)
+    R = Yx.description[:, :, 0]
+    G = Yx.description[:, :, 1]
+    B = Yx.description[:, :, 2]
+    Ry = Yy.description[:, :, 0]
+    Gy = Yy.description[:, :, 1]
+    By = Yy.description[:, :, 2]
     """
+    q = Queue()
+    lock = Lock()
+
+    obj0 = Process(target=AH_interpolateX, args=(f, pattern, gamma, q, lock))
+    obj1 = Process(target=AH_interpolateY, args=(f, pattern, gamma, q, lock))
+    obj2 = Process(target=AH_gradientX, args=(f, pattern, q, lock))
+    obj3 = Process(target=AH_gradientY, args=(f, pattern, q, lock))
+    time_start = time.time()
+    print("++++++++++++++++++++++++++++++++++++++++", time.time())
+    obj0.start()
+    print("++++++++++++++++++++++++++++++++++++++++", time.time())
+    obj1.start()
+    time_end = time.time()
+    print("++++++++++++++++++++++++++++++++++++++++", time.time())
+    obj2.start()
+    print("++++++++++++++++++++++++++++++++++++++++", time.time())
+    obj3.start()
+    print("++++++++++++++++++++++++++++++++++++++++", time.time())
     dict = {}
-    dict.update(workQueue.get())
-    dict.update(workQueue.get())
-    dict.update(workQueue.get())
-    dict.update(workQueue.get())
+    dict.update(q.get())
+
+    dict.update(q.get())
+    dict.update(q.get())
+    dict.update(q.get())
+    obj0.join()
+    obj1.join()
+    obj2.join()
+    obj3.join()
+    obj0.close()
+    obj1.close()
+    obj2.close()
+    obj3.close()
     Yx = dict["Yx"]
     Yy = dict["Yy"]
     Hx = dict["Hx"]
     Hy = dict["Hy"]
+
+    run_time = time_end - time_start
+    print(run_time)
     # set output to Yy if Hy >= Hx
     bigger_index = np.where(Hy <= Hx)
     R = Yx[:, :, 0]
@@ -508,8 +506,6 @@ def AH_demosaic(img, pattern, gamma=1):
 
 # def AHD(img, pattern, delta=2, gamma=1, max_value=255):
 def AHD(img, pattern, delta=2, gamma=1):
-    queueLock = threading.Lock()
-    workQueue = queue.Queue()
     print("AHD demosaic start")
     iterations = 2
     imgh, imgw = img.shape
@@ -527,58 +523,49 @@ def AHD(img, pattern, delta=2, gamma=1):
     # 创建线程并初始化线程
     q = Queue()
     lock = Lock()
-    print("++++++++++++++++++++++++++++++++++++++++", time.time())
-    t1 = threading.Thread(target=AH_interpolateX, args=(f, pattern, gamma, workQueue, queueLock))
-    t2 = threading.Thread(target=AH_interpolateY, args=(f, pattern, gamma, workQueue, queueLock))
-    t1.start()
-    t2.start()
-    # t1.join()
-    # t2.join()
-    dict = {}
-    dict.update(workQueue.get())
-    dict.update(workQueue.get())
-    print("++++++++++++++++++++++++++++++++++++++++", time.time())
-    Yx = dict["Yx"]
-    Yy = dict["Yy"]
-    # 转LAB
-    # YxLAB = RGB2LAB(Yx)
-    # YyLAB = RGB2LAB(Yy)
-    name1 = 'YxLAB'
-    name2 = 'YyLAB'
-    print("++++++++++++++++++++++++++++++++++++++++", time.time())
-    t3 = threading.Thread(target=RGB2LAB, args=(Yx, name1, workQueue, queueLock))
-    t4 = threading.Thread(target=RGB2LAB, args=(Yx, name2, workQueue, queueLock))
-    t3.start()
-    t4.start()
-    # t3.join()
-    # t4.join()
-    dict.update(workQueue.get())
-    dict.update(workQueue.get())
-    print("++++++++++++++++++++++++++++++++++++++++", time.time())
-    YxLAB = dict["YxLAB"]
-    YyLAB = dict["YyLAB"]
-    # 色彩差异的运算
-    epsilonL, epsilonC = MNparamA(YxLAB, YyLAB)
-    # Hx = MNhomogeneity(YxLAB, delta, epsilonL, epsilonC)
-    # Hy = MNhomogeneity(YyLAB, delta, epsilonL, epsilonC)
-    name3 = 'Hx'
-    name4 = 'Hy'
-    print("++++++++++++++++++++++++++++++++++++++++", time.time())
-    obj0 = Process(target=MNhomogeneity, args=(YxLAB, delta, epsilonL, epsilonC, name3, q, lock))
-    obj1 = Process(target=MNhomogeneity, args=(YyLAB, delta, epsilonL, epsilonC, name4, q, lock))
+    obj0 = Process(target=AH_interpolateX, args=(f, pattern, gamma, q, lock))
+    obj1 = Process(target=AH_interpolateY, args=(f, pattern, gamma, q, lock))
     obj0.start()
     obj1.start()
-    # t5.join()
-    # t6.join()
+    dict = {}
+    dict.update(q.get())
+    dict.update(q.get())
+    Yx = dict["Yx"]
+    Yy = dict["Yy"]
+    obj0.join()
+    obj1.join()
+    obj0.close()
+    obj1.close()
+    print("++++++++++++++++++++++++++++++++++++++++", time.time())
+    # 转LAB
+    YxLAB = RGB2LAB(Yx)
+    YyLAB = RGB2LAB(Yy)
+    print("++++++++++++++++++++++++++++++++++++++++", time.time())
+    # 色彩差异的运算
+    epsilonL, epsilonC = MNparamA(YxLAB, YyLAB)
+    print("++++++++++++++++++++++++++++++++++++++++", time.time())
+    # Hx = MNhomogeneity(YxLAB, delta, epsilonL, epsilonC)
+    # Hy = MNhomogeneity(YyLAB, delta, epsilonL, epsilonC)
+    name1 = 'Hx'
+    name2 = 'Hy'
+    print("++++++++++++++++++++++++++++++++++++++++", time.time())
+    obj2 = Process(target=MNhomogeneity, args=(YxLAB, delta, epsilonL, epsilonC, name1, q, lock))
+    obj3 = Process(target=MNhomogeneity, args=(YyLAB, delta, epsilonL, epsilonC, name2, q, lock))
+    print("++++++++++++++++++++++++++++++++++++++++", time.time())
+    obj2.start()
+    print("++++++++++++++++++++++++++++++++++++++++", time.time())
+    obj3.start()
+    print("++++++++++++++++++++++++++++++++++++++++", time.time())
+    dict = {}
     dict.update(q.get())
     dict.update(q.get())
     print("++++++++++++++++++++++++++++++++++++++++", time.time())
     Hx = dict["Hx"]
     Hy = dict["Hy"]
-    obj0.join()
-    obj1.join()
-    obj0.close()
-    obj1.close()
+    obj2.join()
+    obj3.join()
+    obj2.close()
+    obj3.close()
     f_kernel = np.ones((3, 3))
     Hx = signal.convolve(Hx, f_kernel, 'same')
     Hy = signal.convolve(Hy, f_kernel, 'same')
@@ -602,7 +589,6 @@ def AHD(img, pattern, delta=2, gamma=1):
     YT[:, :, 0] = Rs
     YT[:, :, 1] = Gs
     YT[:, :, 2] = Bs
-    print("++++++++++++++++++++++++++++++++++++++++", time.time())
     # 去掉artifact
     Rsa, Gsa, Bsa = MNartifact(Rs, Gs, Bs, iterations)
     # R and B
@@ -616,7 +602,6 @@ def AHD(img, pattern, delta=2, gamma=1):
     # 调整size和值的范畴
     # Y = np.clip(Y, 0, max_value)
     resultY = Y[imgs:imgs + imgh, imgs:imgs + imgw, :]
-    print("++++++++++++++++++++++++++++++++++++++++", time.time())
     return resultY
 
 
@@ -628,7 +613,7 @@ def labf(t):
     return d
 
 
-def RGB2LAB(X, name, q, lock):
+def RGB2LAB(X):
     a = np.array([
         [3.40479, -1.537150, -0.498535],
         [-0.969256, 1.875992, 0.041556],
@@ -658,13 +643,6 @@ def RGB2LAB(X, name, q, lock):
     result_lab[:, :, 0] = 116 * labf(L2 / 255) - 16
     result_lab[:, :, 1] = 500 * (labf(L1 / 255) - labf(L2 / 255))
     result_lab[:, :, 2] = 200 * (labf(L2 / 255) - labf(L3 / 255))
-    try:
-        lock.acquire()
-        # q.put({"Yy": Y}, block=True, timeout=3)
-        q.put({name: result_lab})
-        lock.release()
-    except q.Full:
-        print('任务%d: 队列已满，写入失败')
     return result_lab
 
 

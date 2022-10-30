@@ -10,6 +10,7 @@ from matplotlib import pyplot as plt
 import do_sdblk
 import demosaic
 from multiprocessing import Process
+import do_awb,do_gtm
 
 # import raw_image_show as show
 
@@ -49,9 +50,11 @@ def load_raw():
         print("height:", raw_height)
         print("bayer:", raw_bayer)
         print("bit:", raw_bit)
-        #obj = Process(target=do_raw,args=(file_raw, raw_height, raw_width, raw_bayer, raw_bit))  # args以元组的形式给子进程func函数传位置参数
-        #obj.start()  # 执行子进程对象
-        do_raw(file_raw, raw_height, raw_width, raw_bayer, raw_bit)
+        obj = Process(target=do_raw, args=(file_raw, raw_height, raw_width, raw_bayer, raw_bit))  # args
+        # 以元组的形式给子进程func函数传位置参数
+        obj.start()  # 执行子进程对象
+        # do_raw(file_raw, raw_height, raw_width, raw_bayer, raw_bit)
+
 
 def pure_raw_isp(image, raw_height, raw_width, raw_bit, raw_bayer, raw_name):
     if 0:
@@ -59,20 +62,18 @@ def pure_raw_isp(image, raw_height, raw_width, raw_bit, raw_bayer, raw_name):
         do_pure_raw.raw_to_csv(image, raw_height, raw_width, raw_bayer, raw_name)
     # 输出pure_raw对应的bmp
     pure_raw_rgb_data = do_pure_raw.do_bayer_color(image, raw_height, raw_width, raw_bayer)
-    frame_rgb_pure = pure_raw_rgb_data / (2 ** (raw_bit - 8))
-    frame_rgb_pure = np.clip(frame_rgb_pure, a_min=0, a_max=255)
-    # cv.imwrite(f'{raw_name}bmp', frame_raw)
-    # imwrite默认输出的是BGR图片，所以需要RGB转换未BGR再输出。
-    frame_rgb_pure = frame_rgb_pure.astype(np.uint8)
-    cv.imwrite(f'{raw_name}_pure_raw.bmp', cv.cvtColor(frame_rgb_pure, cv.COLOR_RGBA2BGRA))
+    save_bmp(pure_raw_rgb_data, raw_bit, raw_name + '_pure_raw')
     # 去马赛克处理
     # frame_cfa_rgb = demosaic.AHD(image, raw_bayer)
     frame_cfa_rgb = demosaic.AH_demosaic(image, raw_bayer)
     # frame_cfa_rgb = demosaic.blinnear(image, raw_bayer)
-    frame_cfa_rgb = frame_cfa_rgb / (2 ** (raw_bit - 8))
-    frame_cfa_rgb = np.clip(frame_cfa_rgb, a_min=0, a_max=255)
-    frame_cfa_rgb = frame_cfa_rgb.astype(np.uint8)
-    cv.imwrite(f'{raw_name}_pure_cfa.bmp', cv.cvtColor(frame_cfa_rgb, cv.COLOR_RGBA2BGRA))
+    save_bmp(frame_cfa_rgb, raw_bit, raw_name + '_pure_cfa')
+    print("################################################################")
+    pure_awb_data = do_awb.do_awb(frame_cfa_rgb)
+    save_bmp(pure_awb_data, raw_bit, raw_name + '_pure_awb')
+    print("################################################################")
+    pure_gtm_data = do_gtm.do_ggm(pure_awb_data, raw_bit)
+    save_bmp(pure_gtm_data, raw_bit, raw_name + '_pure_ggm')
 
 
 def raw_image_show_fakecolor(image, height, width, bits):
@@ -108,23 +109,29 @@ def do_raw(file_raw, raw_height, raw_width, raw_bayer, raw_bit):
         print("################################################################")
         print("不存在对应的sdblk,不做LSC处理")
     else:
+        rgb_lsc_data = do_pure_raw.do_bayer_color(frame_lsc_data, raw_height, raw_width, raw_bayer)
+        save_bmp(rgb_lsc_data, raw_bit, raw_name + '_proc_raw')
         # frame_cfa_rgb = demosaic.AHD(frame_lsc_data, raw_bayer)
         frame_cfa_rgb = demosaic.AH_demosaic(frame_lsc_data, raw_bayer)
         # frame_cfa_rgb = demosaic.blinnear(frame_lsc_data, raw_bayer)
-        frame_cfa_rgb = frame_cfa_rgb / (2 ** (raw_bit - 8))
-        frame_cfa_rgb = np.clip(frame_cfa_rgb, a_min=0, a_max=255)
-        frame_cfa_rgb = frame_cfa_rgb.astype(np.uint8)
-        cv.imwrite(f'{raw_name}_proc_cfa.bmp', cv.cvtColor(frame_cfa_rgb, cv.COLOR_RGBA2BGRA))
+        save_bmp(frame_cfa_rgb, raw_bit, raw_name + '_proc_cfa')
         # raw_image_show_fakecolor(rgb_data, raw_height, raw_width, raw_bit)
-        rgb_lsc_data = do_pure_raw.do_bayer_color(frame_lsc_data, raw_height, raw_width, raw_bayer)
-        frame_lsc_rgb = rgb_lsc_data / (2 ** (raw_bit - 8))
-        # cv.imwrite(f'{raw_name}bmp', frame_raw)
-        # imwrite默认输出的是BGR图片，所以需要RGB转换未BGR再输出。
-        frame_lsc_rgb = np.clip(frame_lsc_rgb, a_min=0, a_max=255)
-        frame_lsc_rgb = frame_lsc_rgb.astype(np.uint8)
-        cv.imwrite(f'{raw_name}_proc_raw.bmp', cv.cvtColor(frame_lsc_rgb, cv.COLOR_RGBA2BGRA))
         print("################################################################")
+        awb_data = do_awb.do_awb(frame_cfa_rgb)
+        save_bmp(awb_data, raw_bit, raw_name + '_proc_awb')
+        print("################################################################")
+        gtm_data = do_gtm.do_ggm(awb_data, raw_bit)
+        save_bmp(gtm_data, raw_bit, raw_name + '_proc_ggm')
 
+
+def save_bmp(img, bit, name):
+    img[img < 0] = 0
+    img = img / (2**(bit - 8))
+    # cv.imwrite(f'{raw_name}bmp', frame_raw)
+    # imwrite默认输出的是BGR图片，所以需要RGB转换未BGR再输出
+    img = np.clip(img, 0, 255)
+    img = img.astype(np.uint8)
+    cv.imwrite(f'{name}.bmp', cv.cvtColor(img, cv.COLOR_RGBA2BGRA))
 
 
 if __name__ == "__main__":
