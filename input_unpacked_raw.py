@@ -63,15 +63,19 @@ def pure_raw_isp(image, raw_height, raw_width, raw_bit, raw_bayer, raw_name):
     # 输出pure_raw对应的bmp
     pure_raw_rgb_data = do_pure_raw.do_bayer_color(image, raw_height, raw_width, raw_bayer)
     save_bmp(pure_raw_rgb_data, raw_bit, raw_name + '_pure_raw')
+    # OB处理
+    pure_obc_data = do_pure_raw.do_black_level_correction(image, raw_bit)
     # 去马赛克处理
-    # frame_cfa_rgb = demosaic.AHD(image, raw_bayer)
-    frame_cfa_rgb = demosaic.AH_demosaic(image, raw_bayer)
-    # frame_cfa_rgb = demosaic.blinnear(image, raw_bayer)
+    # frame_cfa_rgb = demosaic.AHD(pure_obc_data, raw_bayer)
+    frame_cfa_rgb = demosaic.AH_demosaic(pure_obc_data, raw_bayer)
+    # frame_cfa_rgb = demosaic.blinnear(pure_obc_data, raw_bayer)
     save_bmp(frame_cfa_rgb, raw_bit, raw_name + '_pure_cfa')
     print("################################################################")
+    # AWB处理
     pure_awb_data = do_awb.do_awb(frame_cfa_rgb)
     save_bmp(pure_awb_data, raw_bit, raw_name + '_pure_awb')
     print("################################################################")
+    # ggm处理
     pure_gtm_data = do_gtm.do_ggm(pure_awb_data, raw_bit)
     save_bmp(pure_gtm_data, raw_bit, raw_name + '_pure_ggm')
 
@@ -117,9 +121,11 @@ def do_raw(file_raw, raw_height, raw_width, raw_bayer, raw_bit):
         save_bmp(frame_cfa_rgb, raw_bit, raw_name + '_proc_cfa')
         # raw_image_show_fakecolor(rgb_data, raw_height, raw_width, raw_bit)
         print("################################################################")
+        # AWB处理
         awb_data = do_awb.do_awb(frame_cfa_rgb)
         save_bmp(awb_data, raw_bit, raw_name + '_proc_awb')
         print("################################################################")
+        # GGM处理
         gtm_data = do_gtm.do_ggm(awb_data, raw_bit)
         save_bmp(gtm_data, raw_bit, raw_name + '_proc_ggm')
 

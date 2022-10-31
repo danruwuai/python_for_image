@@ -30,9 +30,9 @@ def do_ggm(img, bit):
     for i in range(len(x)):
         x[i] = x[i] * 2 ** (bit - 8)
         y[i] = y[i] * 2 ** (bit - 8)
-    print(x, y)
     x.append(2**bit - 1)
     y.append(2**bit - 1)
+    print(x, y)
     #fun = splrep(x, y, )
     fun = interp1d(x, y, kind="cubic")
     # print(fun)

@@ -104,9 +104,7 @@ def AH_gradient(img, pattern):
     Hg2 = Hg2.reshape(1, -1)
     Hg1 = Hg1.astype(np.float)
     Hg2 = Hg2.astype(np.float)
-    Ga = (Rm + Gm) * (np.abs(signal.convolve(X, Hg1, 'same')) + np.abs(signal.convolve(X, Hg2, 'same')))
-
-    return Ga
+    return (Rm + Gm) * (np.abs(signal.convolve(X, Hg1, 'same')) + np.abs(signal.convolve(X, Hg2, 'same')))
 
 
 def AH_gradientX(img, pattern, q, lock):
@@ -304,7 +302,7 @@ def MNparamA(YxLAB, YyLAB):
     t11.join()
     t12.join()
     dict1 = {}
-    for i in range(MNq.qsize()):
+    for _ in range(MNq.qsize()):
         dict1.update(MNq.get())
     X0_h1 = dict1['X0_h1']
     X0_h2 = dict1['X0_h2']

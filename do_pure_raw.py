@@ -90,7 +90,7 @@ def bayer_channel_separation(data, pattern):
         R = image_data[1::2, 1::2]
     else:
         print("no match pattern")
-        print("pattern must be one of ： RGGB GRBG GBRG BGGR or 0 1 2 3")
+        print("pattern must be one of : RGGB GRBG GBRG BGGR or 0 1 2 3")
         return False
     return R, GR, GB, B
 
@@ -128,15 +128,15 @@ def bayer_channel_integrration(R, GR, GB, B, pattern):
         data[1::2, 1::2] = R
     else:
         print("no match pattern")
-        print("pattern must be one of ： RGGB GRBG GBRG BGGR or 0 1 2 3")
+        print("pattern must be one of : RGGB GRBG GBRG BGGR or 0 1 2 3")
         return False
     return data
 
 
-def histogram_show(frame_data, bits):
+def histogram_show(frame_data, bits):  # sourcery skip: avoid-builtin-shadow
     out = frame_data
     max = 2 ** bits - 1
-    hist, bins = np.histogram(out, bins=range(0, max))
+    hist, bins = np.histogram(out, bins=range(max))
     plt.figure(num='hist', figsize=(5, 6))
     plt.bar(range(len(hist)), hist)
     plt.show()

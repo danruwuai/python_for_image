@@ -131,7 +131,7 @@ def transform_lsc_data(lsc_file_path):
                     hwtbl_file.write("\n")
 
 
-def transf_lsc(sdblk_file_path, bayer):
+def transf_lsc(sdblk_file_path, bayer):  # sourcery skip: low-code-quality
     sdblk_name = os.path.splitext(sdblk_file_path)[0]
     data_num = 9
     with open(sdblk_file_path, "r") as sdblk_file:
@@ -263,11 +263,10 @@ def do_lsc_for_raw(image, bayer, sdblk_mask):
             if lsc_file_path[:19] == sdblk_mask:
                 lsc_flag = True
                 break
-        if lsc_flag:
-            transform_lsc_data(lsc_file_path)
-            sdblk_file = os.path.splitext(lsc_file_path)[0] + ".sdblk"
-        else:
+        if not lsc_flag:
             return image, False
+        transform_lsc_data(lsc_file_path)
+        sdblk_file = os.path.splitext(lsc_file_path)[0] + ".sdblk"
     R, GR, GB, B = do_pure_raw.bayer_channel_separation(image, bayer)
     HH, HW = R.shape
     block_size = 16
@@ -279,7 +278,7 @@ def do_lsc_for_raw(image, bayer, sdblk_mask):
     ex_GB_gain_map = cv2.resize(shading_GB, size_new, interpolation=cv2.INTER_CUBIC)
     ex_B_gain_map = cv2.resize(shading_B, size_new, interpolation=cv2.INTER_CUBIC)
 
-    half_b_size = int(block_size / 2)
+    half_b_size = block_size // 2
     R_gain_map = ex_R_gain_map[half_b_size:half_b_size + HH, half_b_size:half_b_size + HW]
     GR_gain_map = ex_GR_gain_map[half_b_size:half_b_size + HH, half_b_size:half_b_size + HW]
     GB_gain_map = ex_GB_gain_map[half_b_size:half_b_size + HH, half_b_size:half_b_size + HW]

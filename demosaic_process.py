@@ -112,9 +112,7 @@ def AH_gradient(img, pattern):
     Hg2 = Hg2.reshape(1, -1)
     Hg1 = Hg1.astype(np.float64)
     Hg2 = Hg2.astype(np.float64)
-    Ga = (Rm + Gm) * (np.abs(signal.convolve(X, Hg1, 'same')) + np.abs(signal.convolve(X, Hg2, 'same')))
-
-    return Ga
+    return (Rm + Gm) * (np.abs(signal.convolve(X, Hg1, 'same')) + np.abs(signal.convolve(X, Hg2, 'same')))
 
 
 def AH_gradientX(img, pattern, q, lock):
@@ -340,7 +338,7 @@ def MNartifact(R, G, B, iteartions):
     kernel_8 = np.array([[0, 0, 0], [0, 0, 0], [0, 1, 0]])
     kernel_9 = np.array([[0, 0, 0], [0, 0, 0], [0, 0, 1]])
 
-    for i in range(iteartions):
+    for _ in range(iteartions):
         Rt[:, :, 0] = signal.convolve(R - G, kernel_1, 'same')
         Rt[:, :, 1] = signal.convolve(R - G, kernel_2, 'same')
         Rt[:, :, 2] = signal.convolve(R - G, kernel_3, 'same')
@@ -386,7 +384,7 @@ def MNartifact(R, G, B, iteartions):
 
 # adams hamilton
 # def AH_demosaic(img, pattern, gamma=1, max_value=255):
-def AH_demosaic(img, pattern, gamma=1):
+def AH_demosaic(img, pattern, gamma=1):  # sourcery skip: avoid-builtin-shadow
     # 转换为flat，便于后边计算
     img = img.astype(np.float64)
     print("AH demosic start")
@@ -498,14 +496,11 @@ def AH_demosaic(img, pattern, gamma=1):
     Y[:, :, 0] = Rs
     Y[:, :, 1] = Gs
     Y[:, :, 2] = Bs
-    # 调整size和值的范围
-    # Y = np.clip(Y, 0, max_value)
-    resultY = Y[imgs:imgs + imgh, imgs:imgs + imgw, :]
-    return resultY
+    return Y[imgs:imgs + imgh, imgs:imgs + imgw, :]
 
 
 # def AHD(img, pattern, delta=2, gamma=1, max_value=255):
-def AHD(img, pattern, delta=2, gamma=1):
+def AHD(img, pattern, delta=2, gamma=1):  # sourcery skip: avoid-builtin-shadow
     print("AHD demosaic start")
     iterations = 2
     imgh, imgw = img.shape
@@ -599,10 +594,7 @@ def AHD(img, pattern, delta=2, gamma=1):
     Y[:, :, 1] = Gsa
     Y[:, :, 2] = Bsa
 
-    # 调整size和值的范畴
-    # Y = np.clip(Y, 0, max_value)
-    resultY = Y[imgs:imgs + imgh, imgs:imgs + imgw, :]
-    return resultY
+    return Y[imgs:imgs + imgh, imgs:imgs + imgw, :]
 
 
 # internal function

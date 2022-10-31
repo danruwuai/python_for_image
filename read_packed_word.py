@@ -82,7 +82,7 @@ def read_packed_word(file_path_name, height, width, bayer, bit):
         if width_flag == 1:
             print("Wrong width,Calculated real width ")
             new_width_real = width_real
-            for i in range(width_real - 32, width_real):  # 在末尾32字节范围内判断
+            for i in range(new_width_real - 32, new_width_real):  # 在末尾32字节范围内判断
                 if frame_out[0, i] == 0:  # 判断为0的补偿值
                     if frame_out[int(height / 2), i] == 0:  # 判断为0的补偿值
                         if i < new_width_real:
