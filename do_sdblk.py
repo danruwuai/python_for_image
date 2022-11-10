@@ -1,13 +1,13 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
-
+import time
 import math
 import os
 import cv2
 import numpy as np
 import raw_image_show
 import do_pure_raw
-from multiprocessing import Process
+from multiprocessing import Process, Queue, Lock
 
 
 def get_lsc_file(dir_path):
@@ -118,10 +118,10 @@ def transform_lsc_data(lsc_file_path):
             blk_wd_last = lsc_file[16] + np.left_shift(lsc_file[17], 8)
             blk_ht_last = lsc_file[18] + np.left_shift(lsc_file[19], 8)
             unknown = lsc_file[20] + np.left_shift(lsc_file[21], 8)
-            print(width, height, blk_num_w, blk_num_h, blk_num_x, blk_num_y, blk_wd, blk_ht, blk_wd_last,
-                  blk_ht_last, unknown)
-            sdblk_file.write('%9d%9d%9d%9d%9d%9d%9d%9d\n' % (
-            0, 0, blk_wd, blk_ht, blk_num_x, blk_num_y, blk_wd_last, blk_ht_last))
+            print(width, height, blk_num_w, blk_num_h, blk_num_x, blk_num_y, blk_wd, blk_ht, blk_wd_last, blk_ht_last,
+                  unknown)
+            sdblk_file.write('%9d%9d%9d%9d%9d%9d%9d%9d\n' % (0, 0, blk_wd, blk_ht, blk_num_x, blk_num_y, blk_wd_last,
+                                                             blk_ht_last))
             for i in range((blk_num_w - 1) * (blk_num_h - 1) * 4 * 12):
                 sdblk_file.write('%9d' % (lsc_file[i + 22]))
                 if i % 2 == 1:
@@ -135,34 +135,38 @@ def transf_lsc(sdblk_file_path, bayer):  # sourcery skip: low-code-quality
     sdblk_name = os.path.splitext(sdblk_file_path)[0]
     data_num = 9
     with open(sdblk_file_path, "r") as sdblk_file:
+        dict_sdblk = {}
         lsc_info = sdblk_file.readline()
-        blk_offset_x = int(lsc_info[0 * data_num: 1 * data_num])
+        dict_sdblk["blk_offset_x"] = int(lsc_info[0 * data_num: 1 * data_num])
         if lsc_info[1 * data_num:1 * data_num + 1] != " ":
-            blk_offset_y = int(lsc_info[1 * (data_num + 1): 2 * (data_num + 1)])
-            blk_wd = int(lsc_info[2 * (data_num + 1): 3 * (data_num + 1)])
-            blk_ht = int(lsc_info[3 * (data_num + 1): 4 * (data_num + 1)])
+            dict_sdblk["blk_offset_y"] = int(lsc_info[1 * (data_num + 1): 2 * (data_num + 1)])
+            dict_sdblk["blk_wd"] = int(lsc_info[2 * (data_num + 1): 3 * (data_num + 1)])
+            dict_sdblk["blk_ht"] = int(lsc_info[3 * (data_num + 1): 4 * (data_num + 1)])
             blk_num_x = int(lsc_info[4 * (data_num + 1): 5 * (data_num + 1)])
             blk_num_y = int(lsc_info[5 * (data_num + 1): 6 * (data_num + 1)])
-            blk_wd_last = int(lsc_info[6 * (data_num + 1): 7 * (data_num + 1)])
-            blk_ht_last = int(lsc_info[7 * (data_num + 1): 8 * (data_num + 1)])
+            dict_sdblk["blk_wd_last"] = int(lsc_info[6 * (data_num + 1): 7 * (data_num + 1)])
+            dict_sdblk["blk_ht_last"] = int(lsc_info[7 * (data_num + 1): 8 * (data_num + 1)])
         else:
-            blk_offset_y = int(lsc_info[1 * data_num: 2 * data_num])
-            blk_wd = int(lsc_info[2 * data_num: 3 * data_num])
-            blk_ht = int(lsc_info[3 * data_num: 4 * data_num])
+            dict_sdblk["blk_offset_y"] = int(lsc_info[1 * data_num: 2 * data_num])
+            dict_sdblk["blk_wd"] = int(lsc_info[2 * data_num: 3 * data_num])
+            dict_sdblk["blk_ht"] = int(lsc_info[3 * data_num: 4 * data_num])
             blk_num_x = int(lsc_info[4 * data_num: 5 * data_num])
             blk_num_y = int(lsc_info[5 * data_num: 6 * data_num])
-            blk_wd_last = int(lsc_info[6 * data_num: 7 * data_num])
-            blk_ht_last = int(lsc_info[7 * data_num: 8 * data_num])
-        width = blk_wd * blk_num_x * 2 + blk_wd_last * 2 + blk_offset_x * 2
-        height = blk_ht * 2 * blk_num_y + blk_ht_last * 2 + blk_offset_y * 2
-        print(blk_offset_x, blk_offset_y, blk_wd, blk_ht, blk_num_x, blk_num_y, blk_wd_last, blk_ht_last)
-        print(lsc_info, width, height)
-        blk_y = blk_num_y + 1
-        blk_x = blk_num_x + 1
-        lsc_data_0 = np.zeros(shape=(blk_y * 3, blk_x * 4))
-        lsc_data_1 = np.zeros(shape=(blk_y * 3, blk_x * 4))
-        lsc_data_2 = np.zeros(shape=(blk_y * 3, blk_x * 4))
-        lsc_data_3 = np.zeros(shape=(blk_y * 3, blk_x * 4))
+            dict_sdblk["blk_wd_last"] = int(lsc_info[6 * data_num: 7 * data_num])
+            dict_sdblk["blk_ht_last"] = int(lsc_info[7 * data_num: 8 * data_num])
+        dict_sdblk["width"] = dict_sdblk["blk_wd"] * blk_num_x * 2 + dict_sdblk["blk_wd_last"] * 2 +\
+                              dict_sdblk["blk_offset_x"] * 2
+        dict_sdblk["height"] = dict_sdblk["blk_ht"] * 2 * blk_num_y + dict_sdblk["blk_ht_last"] * 2 +\
+                               dict_sdblk["blk_offset_y"] * 2
+        print(dict_sdblk["blk_offset_x"], dict_sdblk["blk_offset_y"], dict_sdblk["blk_wd"], dict_sdblk["blk_ht"],
+              blk_num_x, blk_num_y, dict_sdblk["blk_wd_last"], dict_sdblk["blk_ht_last"])
+        print(lsc_info, dict_sdblk["width"], dict_sdblk["height"])
+        dict_sdblk["blk_y"] = blk_num_y + 1
+        dict_sdblk["blk_x"] = blk_num_x + 1
+        sdblk_data_0 = np.zeros(shape=(dict_sdblk["blk_y"], dict_sdblk["blk_x"], 12))
+        sdblk_data_1 = np.zeros(shape=(dict_sdblk["blk_y"], dict_sdblk["blk_x"], 12))
+        sdblk_data_2 = np.zeros(shape=(dict_sdblk["blk_y"], dict_sdblk["blk_x"], 12))
+        sdblk_data_3 = np.zeros(shape=(dict_sdblk["blk_y"], dict_sdblk["blk_x"], 12))
         flag = 0
         # next(sdblk_file)
         for line in sdblk_file:
@@ -172,60 +176,78 @@ def transf_lsc(sdblk_file_path, bayer):  # sourcery skip: low-code-quality
                 for i in range(12):
                     if flag % 4 == 0:
                         if i == 11:
-                            lsc_data_0[3 * (flag // (4 * blk_x)) + i // 4, 4 * (flag // 4 % blk_x) + i % 4] = int(
+                            sdblk_data_0[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
                                 data[i * data_num: (i + 1) * data_num]) / 4096
-                        elif int(data[i * data_num: (i + 1) * data_num]) >= 32768:
-                            lsc_data_0[3 * (flag // (4 * blk_x)) + i // 4, 4 * (flag // 4 % blk_x) + i % 4] = int(
-                                32768 - int(data[i * data_num: (i + 1) * data_num]) + int(
-                                    data[11 * data_num: (11 + 1) * data_num])) / 4096
+                        elif int(data[i * data_num: (i + 1) * data_num]) < 32768:
+                            sdblk_data_0[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
+                                data[i * data_num: (i + 1) * data_num]) / 4096
                         else:
-                            lsc_data_0[3 * (flag // (4 * blk_x)) + i // 4, 4 * (flag // 4 % blk_x) + i % 4] = (int(data[
-                                                                                                                   i * data_num: (
-                                                                                                                                             i + 1) * data_num]) + int(
-                                data[11 * data_num: (11 + 1) * data_num])) / 4096
+                            sdblk_data_0[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] =\
+                                (32768 - int(data[i * data_num: (i + 1) * data_num])) / 4096
                     elif flag % 4 == 1:
                         if i == 11:
-                            lsc_data_1[3 * (flag // (4 * blk_x)) + i // 4, 4 * (flag // 4 % blk_x) + i % 4] = int(
+                            sdblk_data_1[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
                                 data[i * data_num: (i + 1) * data_num]) / 4096
-                        elif int(data[i * data_num: (i + 1) * data_num]) >= 32768:
-                            lsc_data_1[3 * (flag // (4 * blk_x)) + i // 4, 4 * (flag // 4 % blk_x) + i % 4] = int(
-                                32768 - int(data[i * data_num: (i + 1) * data_num]) + int(
-                                    data[11 * data_num: (11 + 1) * data_num])) / 4096
+                        elif int(data[i * data_num: (i + 1) * data_num]) < 32768:
+                            sdblk_data_1[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
+                                data[i * data_num: (i + 1) * data_num]) / 4096
                         else:
-                            lsc_data_1[3 * (flag // (4 * blk_x)) + i // 4, 4 * (flag // 4 % blk_x) + i % 4] = (int(data[
-                                                                                                                   i * data_num: (
-                                                                                                                                             i + 1) * data_num]) + int(
-                                data[11 * data_num: (11 + 1) * data_num])) / 4096
+                            sdblk_data_1[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] =\
+                                (32768 - int(data[i * data_num: (i + 1) * data_num])) / 4096
                     elif flag % 4 == 2:
                         if i == 11:
-                            lsc_data_2[3 * (flag // (4 * blk_x)) + i // 4, 4 * (flag // 4 % blk_x) + i % 4] = int(
+                            sdblk_data_2[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
                                 data[i * data_num: (i + 1) * data_num]) / 4096
-                        elif int(data[i * data_num: (i + 1) * data_num]) >= 32768:
-                            lsc_data_2[3 * (flag // (4 * blk_x)) + i // 4, 4 * (flag // 4 % blk_x) + i % 4] = int(
-                                32768 - int(data[i * data_num: (i + 1) * data_num]) + int(
-                                    data[11 * data_num: (11 + 1) * data_num])) / 4096
+                        elif int(data[i * data_num: (i + 1) * data_num]) < 32768:
+                            sdblk_data_2[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
+                                data[i * data_num: (i + 1) * data_num]) / 4096
                         else:
-                            lsc_data_2[3 * (flag // (4 * blk_x)) + i // 4, 4 * (flag // 4 % blk_x) + i % 4] = (int(data[
-                                                                                                                   i * data_num: (
-                                                                                                                                             i + 1) * data_num]) + int(
-                                data[11 * data_num: (11 + 1) * data_num])) / 4096
-                    elif flag % 4 == 3:
+                            sdblk_data_2[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] =\
+                                (32768 - int(data[i * data_num: (i + 1) * data_num])) / 4096
+                    else:
                         if i == 11:
-                            lsc_data_3[3 * (flag // (4 * blk_x)) + i // 4, 4 * (flag // 4 % blk_x) + i % 4] = int(
+                            sdblk_data_3[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
                                 data[i * data_num: (i + 1) * data_num]) / 4096
-                        elif int(data[i * data_num: (i + 1) * data_num]) >= 32768:
-                            lsc_data_3[3 * (flag // (4 * blk_x)) + i // 4, 4 * (flag // 4 % blk_x) + i % 4] = int(
-                                32768 - int(data[i * data_num: (i + 1) * data_num]) + int(
-                                    data[11 * data_num: (11 + 1) * data_num])) / 4096
+                        elif int(data[i * data_num: (i + 1) * data_num]) < 32768:
+                            sdblk_data_3[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
+                                data[i * data_num: (i + 1) * data_num]) / 4096
                         else:
-                            lsc_data_3[3 * (flag // (4 * blk_x)) + i // 4, 4 * (flag // 4 % blk_x) + i % 4] = (int(data[
-                                                                                                                   i * data_num: (
-                                                                                                                                             i + 1) * data_num]) + int(
-                                data[11 * data_num: (11 + 1) * data_num])) / 4096
+                            sdblk_data_3[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] =\
+                                (32768 - int(data[i * data_num: (i + 1) * data_num])) / 4096
                 flag = flag + 1
+
+        start = time.time()
+        """
+        lsc_data_0 = cal_lsc_data(sdblk_data_0, dict_sdblk)
+        lsc_data_1 = cal_lsc_data(sdblk_data_1, dict_sdblk)
+        lsc_data_2 = cal_lsc_data(sdblk_data_2, dict_sdblk)
+        lsc_data_3 = cal_lsc_data(sdblk_data_3, dict_sdblk)
+        """
+        q = Queue()
+        lock = Lock()
+        dict = {}
+        obj0 = Process(target=cal_lsc_data, args=(sdblk_data_0, dict_sdblk, "lsc0", q, lock))
+        obj1 = Process(target=cal_lsc_data, args=(sdblk_data_1, dict_sdblk, "lsc1", q, lock))
+        obj2 = Process(target=cal_lsc_data, args=(sdblk_data_2, dict_sdblk, "lsc2", q, lock))
+        obj3 = Process(target=cal_lsc_data, args=(sdblk_data_3, dict_sdblk, "lsc3", q, lock))
+        obj0.start()
+        obj1.start()
+        obj2.start()
+        obj3.start()
+        dict.update(q.get())
+        dict.update(q.get())
+        dict.update(q.get())
+        dict.update(q.get())
+        lsc_data_0 = dict["lsc0"]
+        lsc_data_1 = dict["lsc1"]
+        lsc_data_2 = dict["lsc2"]
+        lsc_data_3 = dict["lsc3"]
+        end = time.time()
+        print(end - start)
         # 图像显示lsc
         #　raw_image_show.raw_image_show_3D(lsc_data_0, blk_y * 3, blk_x * 4)
-        obj = Process(target=raw_image_show.raw_image_show_lsc, args=(lsc_data_0, lsc_data_1, lsc_data_2, lsc_data_3, blk_y * 3, blk_x * 4))  # args以元组的形式给子进程func函数传位置参数
+        obj = Process(target=raw_image_show.raw_image_show_lsc, args=(
+            lsc_data_0, lsc_data_1, lsc_data_2, lsc_data_3, dict_sdblk["height"] / 2, dict_sdblk["width"] / 2))  # args以元组的形式给子进程func函数传位置参数
         # kwargs以字典的形式给子进程func函数传关键字参数
         # kwargs={'name': '小杨', 'age': 18}
         obj.start()  # 执行子进程对象
@@ -244,6 +266,67 @@ def transf_lsc(sdblk_file_path, bayer):  # sourcery skip: low-code-quality
             return False
 
 
+"""
+def cal_lsc_data(sdblk_data, dict_sdblk):
+    lsc_data = np.zeros(shape=(dict_sdblk["height"] // 2, dict_sdblk["width"] // 2))
+    for j in range(dict_sdblk["blk_y"]):
+        for i in range(dict_sdblk["blk_x"]):
+            if i < dict_sdblk["blk_x"] - 1 and j < dict_sdblk["blk_y"] - 1:
+                lsc_data[j * dict_sdblk["blk_ht"]:(j+1) * dict_sdblk["blk_ht"],
+                i * dict_sdblk["blk_wd"]:(i+1) * dict_sdblk["blk_wd"]] =\
+                    func_sdblk(sdblk_data[j, i, :], dict_sdblk["blk_ht"], dict_sdblk["blk_wd"])
+            else:
+                lsc_data[j * dict_sdblk["blk_ht"]:j * dict_sdblk["blk_ht"] + dict_sdblk["blk_ht_last"], i *dict_sdblk["blk_wd"]:i * dict_sdblk["blk_wd"]+dict_sdblk["blk_wd_last"]] = func_sdblk(sdblk_data[j, i,:], dict_sdblk["blk_ht_last"],
+                                                                          dict_sdblk["blk_wd_last"])
+    return lsc_data
+"""
+
+
+def cal_lsc_data(sdblk_data, dict_sdblk, name, q, lock):
+    lsc_data = np.zeros(shape=(dict_sdblk["height"] // 2, dict_sdblk["width"] // 2))
+    for j in range(dict_sdblk["blk_y"]):
+        for i in range(dict_sdblk["blk_x"]):
+            if i < dict_sdblk["blk_x"] - 1 and j < dict_sdblk["blk_y"] - 1:
+                lsc_data[j * dict_sdblk["blk_ht"]:(j + 1) * dict_sdblk["blk_ht"],
+                i * dict_sdblk["blk_wd"]:(i + 1) * dict_sdblk["blk_wd"]] = \
+                    func_sdblk(sdblk_data[j, i, :], dict_sdblk["blk_ht"], dict_sdblk["blk_wd"])
+            else:
+                lsc_data[j * dict_sdblk["blk_ht"]:j * dict_sdblk["blk_ht"] + dict_sdblk["blk_ht_last"],
+                i * dict_sdblk["blk_wd"]:i * dict_sdblk["blk_wd"] + dict_sdblk["blk_wd_last"]] = func_sdblk(
+                    sdblk_data[j, i, :], dict_sdblk["blk_ht_last"],
+                    dict_sdblk["blk_wd_last"])
+    try:
+        lock.acquire()
+        # q.put({"Yy": Y}, block=True, timeout=3)
+        q.put({name: lsc_data})
+        lock.release()
+    except q.Full:
+        print('任务%d: 队列已满，写入失败')
+    return lsc_data
+
+
+def func_sdblk(blk_sdblk_data, blk_ht, blk_wd):
+    blk_lsc_data = np.zeros(shape=(blk_ht, blk_wd))
+    a0 = blk_sdblk_data[0] * 2 / blk_wd ** 3 / blk_ht
+    a1 = blk_sdblk_data[1] * 2 / blk_wd / blk_ht ** 3
+    a2 = blk_sdblk_data[2] * 2 / blk_wd ** 3
+    a3 = blk_sdblk_data[3] * 2 / blk_wd ** 2 / blk_ht
+    a4 = blk_sdblk_data[4] * 2 / blk_wd / blk_ht ** 2
+    a5 = blk_sdblk_data[5] * 2 / blk_ht ** 3
+    a6 = blk_sdblk_data[6] * 2 / blk_wd ** 2
+    a7 = blk_sdblk_data[7] * 2 / blk_wd / blk_ht
+    a8 = blk_sdblk_data[8] * 2 / blk_ht ** 2
+    a9 = blk_sdblk_data[9] * 2 / blk_wd
+    a10 = blk_sdblk_data[10] * 2 / blk_ht
+    lsc_gain = blk_sdblk_data[11]
+    for x in range(blk_wd):
+        for y in range(blk_ht):
+            blk_lsc_data[y, x] = a0 * (x+1) ** 3 * (y+1) + a1 * (x+1) * (y+1) ** 3 + a2 * (x+1) ** 3 + a3 * (
+                    x+1) ** 2 * (y+1) + a4 * (x+1) * (y+1) ** 2 + a5 * (y+1) ** 3 + a6 * (x+1) ** 2 + a7 * (
+                    x+1) * (y+1) + a8 * (y+1) ** 2 + a9 * (x+1) + a10 * (y+1) + lsc_gain
+    return blk_lsc_data
+
+
 def lsc_to_csv(image, name):
     # 创建CSV表格数据，内容赋值空
     csv_data = image
@@ -259,6 +342,7 @@ def do_lsc_for_raw(image, bayer, sdblk_mask):
     sdblk_file, sdblk_flag = get_sdblk_file(current_working_dir, sdblk_mask)
     if not sdblk_flag:
         file_lsc_list = get_lsc_file(current_working_dir)
+        lsc_flag = False
         for lsc_file_path in file_lsc_list:
             if lsc_file_path[:19] == sdblk_mask:
                 lsc_flag = True
@@ -268,9 +352,10 @@ def do_lsc_for_raw(image, bayer, sdblk_mask):
         transform_lsc_data(lsc_file_path)
         sdblk_file = os.path.splitext(lsc_file_path)[0] + ".sdblk"
     R, GR, GB, B = do_pure_raw.bayer_channel_separation(image, bayer)
-    HH, HW = R.shape
-    block_size = 16
+    # HH, HW = R.shape
+    # block_size = 16
     shading_R, shading_GR, shading_GB, shading_B = transf_lsc(sdblk_file, bayer)
+    """
     size_new = (HW + block_size, HH + block_size)
     # 插值方法的选择
     ex_R_gain_map = cv2.resize(shading_R, size_new, interpolation=cv2.INTER_CUBIC)
@@ -288,6 +373,12 @@ def do_lsc_for_raw(image, bayer, sdblk_mask):
     GR_new = GR * GR_gain_map
     GB_new = GB * GB_gain_map
     B_new = B * B_gain_map
+    """
+
+    R_new = R * shading_R
+    GR_new = GR * shading_GR
+    GB_new = GB * shading_GB
+    B_new = B * shading_B
 
     new_image = do_pure_raw.bayer_channel_integrration(R_new, GR_new, GB_new, B_new, bayer)
     # new_image = np.clip(new_image, a_min=0, a_max=1023)
@@ -298,9 +389,10 @@ def do_lsc_for_raw(image, bayer, sdblk_mask):
 if __name__ == "__main__":
     print('This is main of module')
     # hwtbl_file = "093809365-0093-0000-main-MFNR_Before_Blend_LSC2.hwtbl"
-    # sdblk_file = "000127703-0302-0000-main-MFNR_Before_Blend.sdblk"
-    lsc_file = "011928646-0932-0935-main3-profile_LSC2.lsc"
+    sdblk_file = "011928646-0932-0935-main3-profile_LSC2.sdblk"
+    # lsc_file = "011928646-0932-0935-main3-profile_LSC2.lsc"
     # import_exif_hwtbl(hwtbl_file)
     # import_exif_sdblk(sdblk_file)
-    transform_lsc_data()
+    # transform_lsc_data()
+    transf_lsc(sdblk_file, 2)
     # transf_lsc(sdblk_file)
