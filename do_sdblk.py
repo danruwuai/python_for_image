@@ -138,84 +138,168 @@ def transf_lsc(sdblk_file_path, bayer):  # sourcery skip: low-code-quality
         dict_sdblk = {}
         lsc_info = sdblk_file.readline()
         dict_sdblk["blk_offset_x"] = int(lsc_info[0 * data_num: 1 * data_num])
-        if lsc_info[1 * data_num:1 * data_num + 1] != " ":
-            dict_sdblk["blk_offset_y"] = int(lsc_info[1 * (data_num + 1): 2 * (data_num + 1)])
-            dict_sdblk["blk_wd"] = int(lsc_info[2 * (data_num + 1): 3 * (data_num + 1)])
-            dict_sdblk["blk_ht"] = int(lsc_info[3 * (data_num + 1): 4 * (data_num + 1)])
-            blk_num_x = int(lsc_info[4 * (data_num + 1): 5 * (data_num + 1)])
-            blk_num_y = int(lsc_info[5 * (data_num + 1): 6 * (data_num + 1)])
-            dict_sdblk["blk_wd_last"] = int(lsc_info[6 * (data_num + 1): 7 * (data_num + 1)])
-            dict_sdblk["blk_ht_last"] = int(lsc_info[7 * (data_num + 1): 8 * (data_num + 1)])
+        if len(lsc_info) < 10 * data_num:  
+            sdblk_new = 0      
+            if lsc_info[2 * data_num:2 * data_num + 1] != " ":
+                dict_sdblk["blk_offset_y"] = int(lsc_info[1 * (data_num + 1): 2 * (data_num + 1)])
+                dict_sdblk["blk_wd"] = int(lsc_info[2 * (data_num + 1): 3 * (data_num + 1)])
+                dict_sdblk["blk_ht"] = int(lsc_info[3 * (data_num + 1): 4 * (data_num + 1)])
+                blk_num_x = int(lsc_info[4 * (data_num + 1): 5 * (data_num + 1)])
+                blk_num_y = int(lsc_info[5 * (data_num + 1): 6 * (data_num + 1)])
+                dict_sdblk["blk_wd_last"] = int(lsc_info[6 * (data_num + 1): 7 * (data_num + 1)])
+                dict_sdblk["blk_ht_last"] = int(lsc_info[7 * (data_num + 1): 8 * (data_num + 1)])
+            else:
+                dict_sdblk["blk_offset_y"] = int(lsc_info[1 * data_num: 2 * data_num])
+                dict_sdblk["blk_wd"] = int(lsc_info[2 * data_num: 3 * data_num])
+                dict_sdblk["blk_ht"] = int(lsc_info[3 * data_num: 4 * data_num])
+                blk_num_x = int(lsc_info[4 * data_num: 5 * data_num])
+                blk_num_y = int(lsc_info[5 * data_num: 6 * data_num])
+                dict_sdblk["blk_wd_last"] = int(lsc_info[6 * data_num: 7 * data_num])
+                dict_sdblk["blk_ht_last"] = int(lsc_info[7 * data_num: 8 * data_num])
+            dict_sdblk["width"] = dict_sdblk["blk_wd"] * blk_num_x * 2 + dict_sdblk["blk_wd_last"] * 2 +\
+                                  dict_sdblk["blk_offset_x"] * 2
+            dict_sdblk["height"] = dict_sdblk["blk_ht"] * 2 * blk_num_y + dict_sdblk["blk_ht_last"] * 2 +\
+                                   dict_sdblk["blk_offset_y"] * 2
+            print(dict_sdblk["blk_offset_x"], dict_sdblk["blk_offset_y"], dict_sdblk["blk_wd"], dict_sdblk["blk_ht"],
+                  blk_num_x, blk_num_y, dict_sdblk["blk_wd_last"], dict_sdblk["blk_ht_last"])
+            print(lsc_info, dict_sdblk["width"], dict_sdblk["height"])
+            dict_sdblk["blk_y"] = blk_num_y + 1
+            dict_sdblk["blk_x"] = blk_num_x + 1
+            sdblk_data_0 = np.zeros(shape=(dict_sdblk["blk_y"], dict_sdblk["blk_x"], 12))
+            sdblk_data_1 = np.zeros(shape=(dict_sdblk["blk_y"], dict_sdblk["blk_x"], 12))
+            sdblk_data_2 = np.zeros(shape=(dict_sdblk["blk_y"], dict_sdblk["blk_x"], 12))
+            sdblk_data_3 = np.zeros(shape=(dict_sdblk["blk_y"], dict_sdblk["blk_x"], 12))
+            flag = 0
+            # next(sdblk_file)
+            for line in sdblk_file:
+                if "blockNum" not in line:
+                    data_all = line.split("\n")
+                    data = data_all[0]
+                    for i in range(12):
+                        if flag % 4 == 0:
+                            if i == 11:
+                                sdblk_data_0[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
+                                    data[i * data_num: (i + 1) * data_num]) / 4096
+                            elif int(data[i * data_num: (i + 1) * data_num]) < 32768:
+                                sdblk_data_0[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
+                                    data[i * data_num: (i + 1) * data_num]) / 4096
+                            else:
+                                sdblk_data_0[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] =\
+                                    (32768 - int(data[i * data_num: (i + 1) * data_num])) / 4096
+                        elif flag % 4 == 1:
+                            if i == 11:
+                                sdblk_data_1[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
+                                    data[i * data_num: (i + 1) * data_num]) / 4096
+                            elif int(data[i * data_num: (i + 1) * data_num]) < 32768:
+                                sdblk_data_1[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
+                                    data[i * data_num: (i + 1) * data_num]) / 4096
+                            else:
+                                sdblk_data_1[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] =\
+                                    (32768 - int(data[i * data_num: (i + 1) * data_num])) / 4096
+                        elif flag % 4 == 2:
+                            if i == 11:
+                                sdblk_data_2[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
+                                    data[i * data_num: (i + 1) * data_num]) / 4096
+                            elif int(data[i * data_num: (i + 1) * data_num]) < 32768:
+                                sdblk_data_2[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
+                                    data[i * data_num: (i + 1) * data_num]) / 4096
+                            else:
+                                sdblk_data_2[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] =\
+                                    (32768 - int(data[i * data_num: (i + 1) * data_num])) / 4096
+                        else:
+                            if i == 11:
+                                sdblk_data_3[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
+                                    data[i * data_num: (i + 1) * data_num]) / 4096
+                            elif int(data[i * data_num: (i + 1) * data_num]) < 32768:
+                                sdblk_data_3[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
+                                    data[i * data_num: (i + 1) * data_num]) / 4096
+                            else:
+                                sdblk_data_3[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] =\
+                                    (32768 - int(data[i * data_num: (i + 1) * data_num])) / 4096
+                    flag = flag + 1
         else:
-            dict_sdblk["blk_offset_y"] = int(lsc_info[1 * data_num: 2 * data_num])
-            dict_sdblk["blk_wd"] = int(lsc_info[2 * data_num: 3 * data_num])
-            dict_sdblk["blk_ht"] = int(lsc_info[3 * data_num: 4 * data_num])
-            blk_num_x = int(lsc_info[4 * data_num: 5 * data_num])
-            blk_num_y = int(lsc_info[5 * data_num: 6 * data_num])
-            dict_sdblk["blk_wd_last"] = int(lsc_info[6 * data_num: 7 * data_num])
-            dict_sdblk["blk_ht_last"] = int(lsc_info[7 * data_num: 8 * data_num])
-        dict_sdblk["width"] = dict_sdblk["blk_wd"] * blk_num_x * 2 + dict_sdblk["blk_wd_last"] * 2 +\
-                              dict_sdblk["blk_offset_x"] * 2
-        dict_sdblk["height"] = dict_sdblk["blk_ht"] * 2 * blk_num_y + dict_sdblk["blk_ht_last"] * 2 +\
-                               dict_sdblk["blk_offset_y"] * 2
-        print(dict_sdblk["blk_offset_x"], dict_sdblk["blk_offset_y"], dict_sdblk["blk_wd"], dict_sdblk["blk_ht"],
-              blk_num_x, blk_num_y, dict_sdblk["blk_wd_last"], dict_sdblk["blk_ht_last"])
-        print(lsc_info, dict_sdblk["width"], dict_sdblk["height"])
-        dict_sdblk["blk_y"] = blk_num_y + 1
-        dict_sdblk["blk_x"] = blk_num_x + 1
-        sdblk_data_0 = np.zeros(shape=(dict_sdblk["blk_y"], dict_sdblk["blk_x"], 12))
-        sdblk_data_1 = np.zeros(shape=(dict_sdblk["blk_y"], dict_sdblk["blk_x"], 12))
-        sdblk_data_2 = np.zeros(shape=(dict_sdblk["blk_y"], dict_sdblk["blk_x"], 12))
-        sdblk_data_3 = np.zeros(shape=(dict_sdblk["blk_y"], dict_sdblk["blk_x"], 12))
-        flag = 0
-        # next(sdblk_file)
-        for line in sdblk_file:
-            if "blockNum" not in line:
-                data_all = line.split("\n")
-                data = data_all[0]
-                for i in range(12):
-                    if flag % 4 == 0:
-                        if i == 11:
-                            sdblk_data_0[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
-                                data[i * data_num: (i + 1) * data_num]) / 4096
-                        elif int(data[i * data_num: (i + 1) * data_num]) < 32768:
-                            sdblk_data_0[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
-                                data[i * data_num: (i + 1) * data_num]) / 4096
+            sdblk_new = 1
+            if lsc_info[2 * data_num:2 * data_num + 1] != " ":
+                dict_sdblk["blk_offset_y"] = int(lsc_info[1 * (data_num + 1): 2 * (data_num + 1)])
+                dict_sdblk["blk_wd"] = int(lsc_info[2 * (data_num + 1): 3 * (data_num + 1)])
+                dict_sdblk["blk_ht"] = int(lsc_info[3 * (data_num + 1): 4 * (data_num + 1)])
+                blk_num_x = int(lsc_info[4 * (data_num + 1): 5 * (data_num + 1)])
+                blk_num_y = int(lsc_info[5 * (data_num + 1): 6 * (data_num + 1)])
+                dict_sdblk["blk_wd_last0"] = int(lsc_info[6 * (data_num + 1): 7 * (data_num + 1)])
+                dict_sdblk["blk_ht_last0"] = int(lsc_info[7 * (data_num + 1): 8 * (data_num + 1)])
+                dict_sdblk["blk_wd_last1"] = int(lsc_info[8 * (data_num + 1): 9 * (data_num + 1)])
+                dict_sdblk["blk_ht_last1"] = int(lsc_info[9 * (data_num + 1): 10 * (data_num + 1)])
+            else:
+                dict_sdblk["blk_offset_y"] = int(lsc_info[1 * data_num: 2 * data_num])
+                dict_sdblk["blk_wd"] = int(lsc_info[2 * data_num: 3 * data_num])
+                dict_sdblk["blk_ht"] = int(lsc_info[3 * data_num: 4 * data_num])
+                blk_num_x = int(lsc_info[4 * data_num: 5 * data_num])
+                blk_num_y = int(lsc_info[5 * data_num: 6 * data_num])
+                dict_sdblk["blk_wd_last0"] = int(lsc_info[6 * data_num: 7 * data_num])
+                dict_sdblk["blk_ht_last0"] = int(lsc_info[7 * data_num: 8 * data_num])
+                dict_sdblk["blk_wd_last1"] = int(lsc_info[8 * data_num: 9 * data_num])
+                dict_sdblk["blk_ht_last1"] = int(lsc_info[9 * data_num: 10 * data_num])
+            dict_sdblk["width"] = dict_sdblk["blk_wd"] * (blk_num_x - 2) * 2 + dict_sdblk["blk_wd_last0"] * 2 +\
+                                  dict_sdblk["blk_wd_last1"] * 2 + dict_sdblk["blk_offset_x"] * 2
+            dict_sdblk["height"] = dict_sdblk["blk_ht"] * 2 * (blk_num_y - 2) + dict_sdblk["blk_ht_last0"] * 2 +\
+                                   dict_sdblk["blk_ht_last1"] * 2 + dict_sdblk["blk_offset_y"] * 2
+            print(dict_sdblk["blk_offset_x"], dict_sdblk["blk_offset_y"], dict_sdblk["blk_wd"], dict_sdblk["blk_ht"],
+                  blk_num_x, blk_num_y, dict_sdblk["blk_wd_last0"], dict_sdblk["blk_ht_last0"], dict_sdblk["blk_wd_last1"], dict_sdblk["blk_ht_last1"])
+            print(lsc_info, dict_sdblk["width"], dict_sdblk["height"])
+            dict_sdblk["blk_y"] = blk_num_y
+            dict_sdblk["blk_x"] = blk_num_x
+            sdblk_data_0 = np.zeros(shape=(dict_sdblk["blk_y"], dict_sdblk["blk_x"], 12))
+            sdblk_data_1 = np.zeros(shape=(dict_sdblk["blk_y"], dict_sdblk["blk_x"], 12))
+            sdblk_data_2 = np.zeros(shape=(dict_sdblk["blk_y"], dict_sdblk["blk_x"], 12))
+            sdblk_data_3 = np.zeros(shape=(dict_sdblk["blk_y"], dict_sdblk["blk_x"], 12))
+            flag = 0
+            # next(sdblk_file)
+            for line in sdblk_file:
+                if "blockNum" not in line:
+                    data_all = line.split("\n")
+                    data = data_all[0]
+                    for i in range(12):
+                        if flag % 4 == 0:
+                            if i == 11:
+                                sdblk_data_0[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
+                                    data[i * data_num: (i + 1) * data_num]) / 4096 / 8
+                            elif int(data[i * data_num: (i + 1) * data_num]) < 32768 * 16:
+                                sdblk_data_0[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
+                                    data[i * data_num: (i + 1) * data_num]) / 4096 / 16
+                            else:
+                                sdblk_data_0[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] =\
+                                    (32768 * 16 - int(data[i * data_num: (i + 1) * data_num])) / 4096 / 16
+                        elif flag % 4 == 1:
+                            if i == 11:
+                                sdblk_data_1[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
+                                    data[i * data_num: (i + 1) * data_num]) / 4096 / 8
+                            elif int(data[i * data_num: (i + 1) * data_num]) < 32768 * 16:
+                                sdblk_data_1[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
+                                    data[i * data_num: (i + 1) * data_num]) / 4096 / 16
+                            else:
+                                sdblk_data_1[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] =\
+                                    (32768 * 16 - int(data[i * data_num: (i + 1) * data_num])) / 4096 / 16
+                        elif flag % 4 == 2:
+                            if i == 11:
+                                sdblk_data_2[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
+                                    data[i * data_num: (i + 1) * data_num]) / 4096 / 8
+                            elif int(data[i * data_num: (i + 1) * data_num]) < 32768 * 16:
+                                sdblk_data_2[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
+                                    data[i * data_num: (i + 1) * data_num]) / 4096 / 16
+                            else:
+                                sdblk_data_2[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] =\
+                                    (32768 * 16 - int(data[i * data_num: (i + 1) * data_num])) / 4096 / 16
                         else:
-                            sdblk_data_0[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] =\
-                                (32768 - int(data[i * data_num: (i + 1) * data_num])) / 4096
-                    elif flag % 4 == 1:
-                        if i == 11:
-                            sdblk_data_1[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
-                                data[i * data_num: (i + 1) * data_num]) / 4096
-                        elif int(data[i * data_num: (i + 1) * data_num]) < 32768:
-                            sdblk_data_1[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
-                                data[i * data_num: (i + 1) * data_num]) / 4096
-                        else:
-                            sdblk_data_1[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] =\
-                                (32768 - int(data[i * data_num: (i + 1) * data_num])) / 4096
-                    elif flag % 4 == 2:
-                        if i == 11:
-                            sdblk_data_2[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
-                                data[i * data_num: (i + 1) * data_num]) / 4096
-                        elif int(data[i * data_num: (i + 1) * data_num]) < 32768:
-                            sdblk_data_2[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
-                                data[i * data_num: (i + 1) * data_num]) / 4096
-                        else:
-                            sdblk_data_2[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] =\
-                                (32768 - int(data[i * data_num: (i + 1) * data_num])) / 4096
-                    else:
-                        if i == 11:
-                            sdblk_data_3[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
-                                data[i * data_num: (i + 1) * data_num]) / 4096
-                        elif int(data[i * data_num: (i + 1) * data_num]) < 32768:
-                            sdblk_data_3[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
-                                data[i * data_num: (i + 1) * data_num]) / 4096
-                        else:
-                            sdblk_data_3[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] =\
-                                (32768 - int(data[i * data_num: (i + 1) * data_num])) / 4096
-                flag = flag + 1
-
+                            if i == 11:
+                                sdblk_data_3[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
+                                    data[i * data_num: (i + 1) * data_num]) / 4096 / 8
+                            elif int(data[i * data_num: (i + 1) * data_num]) < 32768 * 16:
+                                sdblk_data_3[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] = int(
+                                    data[i * data_num: (i + 1) * data_num]) / 4096 / 16
+                            else:
+                                sdblk_data_3[flag // (4 * dict_sdblk["blk_x"]), flag // 4 % dict_sdblk["blk_x"], i] =\
+                                    (32768 * 16 - int(data[i * data_num: (i + 1) * data_num])) / 4096 / 16
+                    flag = flag + 1            
         start = time.time()
         """
         lsc_data_0 = cal_lsc_data(sdblk_data_0, dict_sdblk)
@@ -226,10 +310,10 @@ def transf_lsc(sdblk_file_path, bayer):  # sourcery skip: low-code-quality
         q = Queue()
         lock = Lock()
         dict = {}
-        obj0 = Process(target=cal_lsc_data, args=(sdblk_data_0, dict_sdblk, "lsc0", q, lock))
-        obj1 = Process(target=cal_lsc_data, args=(sdblk_data_1, dict_sdblk, "lsc1", q, lock))
-        obj2 = Process(target=cal_lsc_data, args=(sdblk_data_2, dict_sdblk, "lsc2", q, lock))
-        obj3 = Process(target=cal_lsc_data, args=(sdblk_data_3, dict_sdblk, "lsc3", q, lock))
+        obj0 = Process(target=cal_lsc_data, args=(sdblk_data_0, dict_sdblk, "lsc0", sdblk_new, q, lock))
+        obj1 = Process(target=cal_lsc_data, args=(sdblk_data_1, dict_sdblk, "lsc1", sdblk_new, q, lock))
+        obj2 = Process(target=cal_lsc_data, args=(sdblk_data_2, dict_sdblk, "lsc2", sdblk_new, q, lock))
+        obj3 = Process(target=cal_lsc_data, args=(sdblk_data_3, dict_sdblk, "lsc3", sdblk_new, q, lock))
         obj0.start()
         obj1.start()
         obj2.start()
@@ -247,7 +331,7 @@ def transf_lsc(sdblk_file_path, bayer):  # sourcery skip: low-code-quality
         # 图像显示lsc
         #　raw_image_show.raw_image_show_3D(lsc_data_0, blk_y * 3, blk_x * 4)
         obj = Process(target=raw_image_show.raw_image_show_lsc, args=(
-            lsc_data_0, lsc_data_1, lsc_data_2, lsc_data_3, dict_sdblk["height"] / 2, dict_sdblk["width"] / 2))  # args以元组的形式给子进程func函数传位置参数
+            lsc_data_0, lsc_data_1, lsc_data_2, lsc_data_3, dict_sdblk["height"] / 2, dict_sdblk["width"] / 2, sdblk_name))  # args以元组的形式给子进程func函数传位置参数
         # kwargs以字典的形式给子进程func函数传关键字参数
         # kwargs={'name': '小杨', 'age': 18}
         obj.start()  # 执行子进程对象
@@ -282,22 +366,76 @@ def cal_lsc_data(sdblk_data, dict_sdblk):
 """
 
 
-def cal_lsc_data(sdblk_data, dict_sdblk, name, q, lock):
+def cal_lsc_data(sdblk_data, dict_sdblk, name, sdblk_new, q, lock):
     lsc_data = np.zeros(shape=(dict_sdblk["height"] // 2, dict_sdblk["width"] // 2))
-    for j in range(dict_sdblk["blk_y"]):
-        for i in range(dict_sdblk["blk_x"]):
-            if i < dict_sdblk["blk_x"] - 1 and j < dict_sdblk["blk_y"] - 1:
-                lsc_data[j * dict_sdblk["blk_ht"]:(j + 1) * dict_sdblk["blk_ht"],
-                i * dict_sdblk["blk_wd"]:(i + 1) * dict_sdblk["blk_wd"]] = \
-                    func_sdblk(sdblk_data[j, i, :], dict_sdblk["blk_ht"], dict_sdblk["blk_wd"])
-            else:
-                lsc_data[j * dict_sdblk["blk_ht"]:j * dict_sdblk["blk_ht"] + dict_sdblk["blk_ht_last"],
-                i * dict_sdblk["blk_wd"]:i * dict_sdblk["blk_wd"] + dict_sdblk["blk_wd_last"]] = func_sdblk(
-                    sdblk_data[j, i, :], dict_sdblk["blk_ht_last"],
-                    dict_sdblk["blk_wd_last"])
+    if sdblk_new == 0:
+        for j in range(dict_sdblk["blk_y"]):
+            for i in range(dict_sdblk["blk_x"]):
+                if i < dict_sdblk["blk_x"] - 1 and j < dict_sdblk["blk_y"] - 1:
+                    lsc_data[j * dict_sdblk["blk_ht"]:(j + 1) * dict_sdblk["blk_ht"],
+                    i * dict_sdblk["blk_wd"]:(i + 1) * dict_sdblk["blk_wd"]] = \
+                        func_sdblk(sdblk_data[j, i, :], dict_sdblk["blk_ht"], dict_sdblk["blk_wd"])
+                elif i < dict_sdblk["blk_x"] - 1 and j == dict_sdblk["blk_y"] - 1:
+                    lsc_data[j * dict_sdblk["blk_ht"]:j * dict_sdblk["blk_ht"] + dict_sdblk["blk_ht_last"],
+                    i * dict_sdblk["blk_wd"]:(i + 1) * dict_sdblk["blk_wd"]] = \
+                        func_sdblk(sdblk_data[j, i, :], dict_sdblk["blk_ht_last"], dict_sdblk["blk_wd"])
+                elif i == dict_sdblk["blk_x"] - 1 and j < dict_sdblk["blk_y"] - 1:
+                    lsc_data[j * dict_sdblk["blk_ht"]:(j + 1) * dict_sdblk["blk_ht"],
+                    i * dict_sdblk["blk_wd"]:i * dict_sdblk["blk_wd"] + dict_sdblk["blk_wd_last"]] = \
+                        func_sdblk(sdblk_data[j, i, :], dict_sdblk["blk_ht"], dict_sdblk["blk_wd_last"])
+                else:
+                    lsc_data[j * dict_sdblk["blk_ht"]:j * dict_sdblk["blk_ht"] + dict_sdblk["blk_ht_last"],
+                    i * dict_sdblk["blk_wd"]:i * dict_sdblk["blk_wd"] + dict_sdblk["blk_wd_last"]] = func_sdblk(
+                        sdblk_data[j, i, :], dict_sdblk["blk_ht_last"],
+                        dict_sdblk["blk_wd_last"])
+    else:
+        for j in range(dict_sdblk["blk_y"]):
+            for i in range(dict_sdblk["blk_x"]):
+                if i == 0 and j == 0:
+                    lsc_data[0:dict_sdblk["blk_ht_last0"],0:dict_sdblk["blk_wd_last0"]] = func_sdblk(
+                        sdblk_data[j, i, :], dict_sdblk["blk_ht_last0"],
+                        dict_sdblk["blk_wd_last0"])
+                elif j == 0 and i < dict_sdblk["blk_x"] - 1:
+                    lsc_data[0:dict_sdblk["blk_ht_last0"],dict_sdblk["blk_wd_last0"] +
+                    (i - 1) * dict_sdblk["blk_wd"]:dict_sdblk["blk_wd_last0"] + i * dict_sdblk["blk_wd"]] = func_sdblk(
+                        sdblk_data[j, i, :], dict_sdblk["blk_ht_last0"],
+                        dict_sdblk["blk_wd"])
+                elif i == 0 and j < dict_sdblk["blk_y"] - 1:
+                    lsc_data[dict_sdblk["blk_ht_last0"] + (j-1) * dict_sdblk["blk_ht"]:j * dict_sdblk["blk_ht"] + dict_sdblk["blk_ht_last0"],
+                    0:dict_sdblk["blk_wd_last0"]] = func_sdblk(
+                        sdblk_data[j, i, :], dict_sdblk["blk_ht"],
+                        dict_sdblk["blk_wd_last0"])
+                elif j == 0 and i == dict_sdblk["blk_x"] - 1:
+                    lsc_data[0:dict_sdblk["blk_ht_last0"], dict_sdblk["blk_wd_last0"] + (i-1) * dict_sdblk["blk_wd"]:
+                        dict_sdblk["blk_wd_last0"] + (i-1) * dict_sdblk["blk_wd"] + dict_sdblk["blk_wd_last1"]] = func_sdblk(
+                        sdblk_data[j, i, :], dict_sdblk["blk_ht_last0"],
+                        dict_sdblk["blk_wd_last1"])
+                elif i == 0 and j == dict_sdblk["blk_y"] - 1:
+                    lsc_data[dict_sdblk["blk_ht_last0"] + (j-1) * dict_sdblk["blk_ht"]:dict_sdblk["blk_ht_last0"] + (j-1) * dict_sdblk["blk_ht"] + dict_sdblk["blk_ht_last1"],
+                    0:dict_sdblk["blk_wd_last0"]] = func_sdblk(
+                        sdblk_data[j, i, :], dict_sdblk["blk_ht_last1"],
+                        dict_sdblk["blk_wd_last0"])
+                elif i == dict_sdblk["blk_x"] - 1 and j == dict_sdblk["blk_y"] - 1:
+                    lsc_data[dict_sdblk["blk_ht_last0"] + (j-1) * dict_sdblk["blk_ht"]:dict_sdblk["blk_ht_last0"] + (j-1) * dict_sdblk["blk_ht"] + dict_sdblk["blk_ht_last1"],
+                    dict_sdblk["blk_wd_last0"] + (i-1) * dict_sdblk["blk_wd"]:dict_sdblk["blk_wd_last0"] + (i-1) * dict_sdblk["blk_wd"] + dict_sdblk["blk_wd_last1"]] = func_sdblk(
+                        sdblk_data[j, i, :], dict_sdblk["blk_ht_last1"],
+                        dict_sdblk["blk_wd_last1"])
+                elif i == dict_sdblk["blk_x"] - 1 and j < dict_sdblk["blk_y"] - 1:
+                    lsc_data[dict_sdblk["blk_ht_last0"] + (j-1) * dict_sdblk["blk_ht"]:j * dict_sdblk["blk_ht"] + dict_sdblk["blk_ht_last0"],
+                    dict_sdblk["blk_wd_last0"] + (i-1) * dict_sdblk["blk_wd"]:dict_sdblk["blk_wd_last0"] + (i-1) * dict_sdblk["blk_wd"] + dict_sdblk["blk_wd_last1"]] = func_sdblk(
+                        sdblk_data[j, i, :], dict_sdblk["blk_ht"],
+                        dict_sdblk["blk_wd_last1"])
+                elif i < dict_sdblk["blk_x"] - 1 and j == dict_sdblk["blk_y"] - 1:
+                    lsc_data[dict_sdblk["blk_ht_last0"] + (j-1) * dict_sdblk["blk_ht"]:dict_sdblk["blk_ht_last0"] + (j-1) * dict_sdblk["blk_ht"] + dict_sdblk["blk_ht_last1"],
+                    dict_sdblk["blk_wd_last0"] + (i - 1) * dict_sdblk["blk_wd"]:dict_sdblk["blk_wd_last0"] + i * dict_sdblk["blk_wd"]] = func_sdblk(
+                        sdblk_data[j, i, :], dict_sdblk["blk_ht_last1"],
+                        dict_sdblk["blk_wd"])
+                else:
+                    lsc_data[dict_sdblk["blk_ht_last0"] + (j-1) * dict_sdblk["blk_ht"]:j * dict_sdblk["blk_ht"] + dict_sdblk["blk_ht_last0"],
+                    dict_sdblk["blk_wd_last0"] + (i - 1) * dict_sdblk["blk_wd"]:dict_sdblk["blk_wd_last0"] + i * dict_sdblk["blk_wd"]] = \
+                        func_sdblk(sdblk_data[j, i, :], dict_sdblk["blk_ht"], dict_sdblk["blk_wd"])
     try:
         lock.acquire()
-        # q.put({"Yy": Y}, block=True, timeout=3)
         q.put({name: lsc_data})
         lock.release()
     except q.Full:
@@ -389,10 +527,10 @@ def do_lsc_for_raw(image, bayer, sdblk_mask):
 if __name__ == "__main__":
     print('This is main of module')
     # hwtbl_file = "093809365-0093-0000-main-MFNR_Before_Blend_LSC2.hwtbl"
-    sdblk_file = "011928646-0932-0935-main3-profile_LSC2.sdblk"
+    sdblk_file = "190331773-4433-4436-main-Capture-BFBLD_BASE-LSC.sdblk"
     # lsc_file = "011928646-0932-0935-main3-profile_LSC2.lsc"
     # import_exif_hwtbl(hwtbl_file)
     # import_exif_sdblk(sdblk_file)
     # transform_lsc_data()
-    transf_lsc(sdblk_file, 2)
+    transf_lsc(sdblk_file, 1)
     # transf_lsc(sdblk_file)
