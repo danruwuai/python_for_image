@@ -444,25 +444,38 @@ def cal_lsc_data(sdblk_data, dict_sdblk, name, sdblk_new, q, lock):
 
 
 def func_sdblk(blk_sdblk_data, blk_ht, blk_wd):
+    a = {}
     blk_lsc_data = np.zeros(shape=(blk_ht, blk_wd))
-    a0 = blk_sdblk_data[0] * 2 / blk_wd ** 3 / blk_ht
-    a1 = blk_sdblk_data[1] * 2 / blk_wd / blk_ht ** 3
-    a2 = blk_sdblk_data[2] * 2 / blk_wd ** 3
-    a3 = blk_sdblk_data[3] * 2 / blk_wd ** 2 / blk_ht
-    a4 = blk_sdblk_data[4] * 2 / blk_wd / blk_ht ** 2
-    a5 = blk_sdblk_data[5] * 2 / blk_ht ** 3
-    a6 = blk_sdblk_data[6] * 2 / blk_wd ** 2
-    a7 = blk_sdblk_data[7] * 2 / blk_wd / blk_ht
-    a8 = blk_sdblk_data[8] * 2 / blk_ht ** 2
-    a9 = blk_sdblk_data[9] * 2 / blk_wd
-    a10 = blk_sdblk_data[10] * 2 / blk_ht
-    lsc_gain = blk_sdblk_data[11]
+    a[0] = blk_sdblk_data[0] * 2 / blk_wd ** 3 / blk_ht
+    a[1] = blk_sdblk_data[1] * 2 / blk_wd / blk_ht ** 3
+    a[2] = blk_sdblk_data[2] * 2 / blk_wd ** 3
+    a[3] = blk_sdblk_data[3] * 2 / blk_wd ** 2 / blk_ht
+    a[4] = blk_sdblk_data[4] * 2 / blk_wd / blk_ht ** 2
+    a[5] = blk_sdblk_data[5] * 2 / blk_ht ** 3
+    a[6] = blk_sdblk_data[6] * 2 / blk_wd ** 2
+    a[7] = blk_sdblk_data[7] * 2 / blk_wd / blk_ht
+    a[8] = blk_sdblk_data[8] * 2 / blk_ht ** 2
+    a[9] = blk_sdblk_data[9] * 2 / blk_wd
+    a[10] = blk_sdblk_data[10] * 2 / blk_ht
+    a[11] = blk_sdblk_data[11]
+    x = np.array([np.arange(0, blk_wd, 1)])
+    y = np.array([np.arange(0, blk_ht, 1)]).T
+    """
     for x in range(blk_wd):
         for y in range(blk_ht):
             blk_lsc_data[y, x] = a0 * (x+1) ** 3 * (y+1) + a1 * (x+1) * (y+1) ** 3 + a2 * (x+1) ** 3 + a3 * (
                     x+1) ** 2 * (y+1) + a4 * (x+1) * (y+1) ** 2 + a5 * (y+1) ** 3 + a6 * (x+1) ** 2 + a7 * (
                     x+1) * (y+1) + a8 * (y+1) ** 2 + a9 * (x+1) + a10 * (y+1) + lsc_gain
+    """
+    blk_lsc_data = cal_sdblk_func(x, y, a)
     return blk_lsc_data
+
+
+# 定义算法
+def cal_sdblk_func(x, y, a):
+    return a[0] * (x+1) ** 3 * (y+1) + a[1] * (x+1) * (y+1) ** 3 + a[2] * (x+1) ** 3 + a[3] * (
+                    x+1) ** 2 * (y+1) + a[4] * (x+1) * (y+1) ** 2 + a[5] * (y+1) ** 3 + a[6] * (x+1) ** 2 + a[7] * (
+                    x+1) * (y+1) + a[8] * (y+1) ** 2 + a[9] * (x+1) + a[10] * (y+1) + a[11]
 
 
 def lsc_to_csv(image, name):

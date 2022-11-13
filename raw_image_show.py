@@ -50,19 +50,19 @@ def raw_image_show_lsc(lsc_R, lsc_GR, lsc_GB, lsc_B, height, width, name):
     ax[0][0].set_title('LSC_R', color='r', loc="left")  # 设置标题
     ax[0][0].axis('off')
     ax[0][0] = fig.add_subplot(2, 2, 1, projection='3d')
-    ax[0][0].plot_wireframe(X, Y, lsc_R, rstride=10, cstride=10, color='r')
+    ax[0][0].plot_wireframe(X, Y, lsc_R, rstride=100, cstride=100, color='r')
     ax[0][1].set_title('LSC_GR', color='g', loc="left")  # 设置标题
     ax[0][1].axis('off')
     ax[0][1] = fig.add_subplot(2, 2, 2, projection='3d')
-    ax[0][1].plot_wireframe(X, Y, lsc_GR, rstride=10, cstride=10, color='g')
+    ax[0][1].plot_wireframe(X, Y, lsc_GR, rstride=100, cstride=100, color='g')
     ax[1][0].set_title('LSC_GB', color='g', loc="left")  # 设置标题
     ax[1][0].axis('off')
     ax[1][0] = fig.add_subplot(2, 2, 3, projection='3d')
-    ax[1][0].plot_wireframe(X, Y, lsc_GB, rstride=10, cstride=10, color='g')
+    ax[1][0].plot_wireframe(X, Y, lsc_GB, rstride=100, cstride=100, color='g')
     ax[1][1].set_title('LSC_B', color='b', loc="left")  # 设置标题
     ax[1][1].axis('off')
     ax[1][1] = fig.add_subplot(2, 2, 4, projection='3d')
-    ax[1][1].plot_wireframe(X, Y, lsc_B, rstride=10, cstride=10, color='b')
+    ax[1][1].plot_wireframe(X, Y, lsc_B, rstride=100, cstride=100, color='b')
     # plt.tight_layout(pad=0.5, w_pad=0.5, h_pad=2.0)
     # 全屏显示
     plt.suptitle(name)

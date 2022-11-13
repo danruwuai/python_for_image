@@ -10,7 +10,8 @@ from matplotlib import pyplot as plt
 import do_sdblk
 import demosaic
 from multiprocessing import Process
-import do_awb,do_gtm
+import do_awb
+import do_gtm
 
 # import raw_image_show as show
 
