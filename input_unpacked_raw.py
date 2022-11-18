@@ -53,11 +53,11 @@ def load_raw():
         print("bit:", raw_bit)
         obj = Process(target=do_raw, args=(file_raw, raw_height, raw_width, raw_bayer, raw_bit))  # args
         # 以元组的形式给子进程func函数传位置参数
-        obj.start()  # 执行子进程对象
-        # do_raw(file_raw, raw_height, raw_width, raw_bayer, raw_bit)
+        #obj.start()  # 执行子进程对象
+        do_raw(file_raw, raw_height, raw_width, raw_bayer, raw_bit)
 
 
-def pure_raw_isp(image, raw_height, raw_width, raw_bit, raw_bayer, raw_name):
+def pure_raw_isp(image, raw_height, raw_width, raw_bit, raw_bayer, raw_name, dict_awb, awb_flag):
     if 0:
         # 输出csv数据
         do_pure_raw.raw_to_csv(image, raw_height, raw_width, raw_bayer, raw_name)
@@ -72,12 +72,15 @@ def pure_raw_isp(image, raw_height, raw_width, raw_bit, raw_bayer, raw_name):
     # frame_cfa_rgb = demosaic.blinnear(pure_obc_data, raw_bayer)
     save_bmp(frame_cfa_rgb, raw_bit, raw_name + '_pure_cfa')
     print("################################################################")
-    # AWB处理
-    pure_awb_data = do_awb.do_awb(frame_cfa_rgb)
-    save_bmp(pure_awb_data, raw_bit, raw_name + '_pure_awb')
-    print("################################################################")
-    # ggm处理
-    pure_gtm_data = do_gtm.do_ggm(pure_awb_data, raw_bit)
+    if not awb_flag:
+        print("不存在对应的jpg或者tuning文件,不做AWB处理")
+        # GGM处理
+        pure_gtm_data = do_gtm.do_ggm(frame_cfa_rgb, raw_bit)
+    else:
+        # AWB处理
+        pure_awb_data = do_awb.do_awb(frame_cfa_rgb, dict_awb)
+        save_bmp(pure_awb_data, raw_bit, raw_name + '_pure_awb')
+        pure_gtm_data = do_gtm.do_ggm(pure_awb_data, raw_bit)
     save_bmp(pure_gtm_data, raw_bit, raw_name + '_pure_ggm')
 
 
@@ -99,17 +102,19 @@ def do_raw(file_raw, raw_height, raw_width, raw_bayer, raw_bit):
     # show.raw_image_show_thumbnail(image, raw_height, raw_width)
     # do_pure_raw.histogram_show(frame_data, raw_bit)
     raw_name = file_raw[:file_raw.find('.')]
+    #获取raw图前面mask信息
+    jpg_mask = raw_name[:19]
+    print("jpg_mask:", jpg_mask)
+    dict_awb, dict_isp, awb_flag = do_awb.get_awb(jpg_mask)
     # pure_raw_isp 子进程进入
     obj = Process(target=pure_raw_isp,
-                  args=(frame_data, raw_height, raw_width, raw_bit, raw_bayer, raw_name))  # args以元组的形式给子进程func函数传位置参数
+                  args=(frame_data, raw_height, raw_width, raw_bit, raw_bayer, raw_name, dict_awb, awb_flag))  # args以元组的形式给子进程func函数传位置参数
     # kwargs以字典的形式给子进程func函数传关键字参数
     # kwargs={'name': '小杨', 'age': 18}
     obj.start()  # 执行子进程对象
     # pure_raw处理
     frame_obc_data = do_pure_raw.do_black_level_correction(frame_data, raw_bit)
-    lsc_mask = raw_name[:19]
-    print("lsc_mask:", lsc_mask)
-    frame_lsc_data, lsc_flag = do_sdblk.do_lsc_for_raw(frame_obc_data, raw_bayer, lsc_mask)
+    frame_lsc_data, lsc_flag = do_sdblk.do_lsc_for_raw(frame_obc_data, raw_bayer, jpg_mask)
     if not lsc_flag:
         print("################################################################")
         print("不存在对应的sdblk,不做LSC处理")
@@ -122,12 +127,21 @@ def do_raw(file_raw, raw_height, raw_width, raw_bayer, raw_bit):
         save_bmp(frame_cfa_rgb, raw_bit, raw_name + '_proc_cfa')
         # raw_image_show_fakecolor(rgb_data, raw_height, raw_width, raw_bit)
         print("################################################################")
-        # AWB处理
-        awb_data = do_awb.do_awb(frame_cfa_rgb)
-        save_bmp(awb_data, raw_bit, raw_name + '_proc_awb')
-        print("################################################################")
-        # GGM处理
-        gtm_data = do_gtm.do_ggm(awb_data, raw_bit)
+        if not awb_flag:
+            print("不存在对应的jpg或者tuning文件,不做AWB处理")
+            # GGM处理
+            gtm_data = do_gtm.do_ggm(frame_cfa_rgb, raw_bit)
+        else:
+            # AWB处理
+            awb_data = do_awb.do_awb(frame_cfa_rgb, dict_awb)
+            save_bmp(awb_data, raw_bit, raw_name + '_proc_awb')
+            print("################################################################")
+            # CCM处理
+            ccm_data = do_awb.do_ccm(awb_data, dict_isp)
+            save_bmp(ccm_data, raw_bit, raw_name + '_proc_ccm')
+            print("################################################################")
+            # GGM处理
+            gtm_data = do_gtm.do_ggm(ccm_data, raw_bit)
         save_bmp(gtm_data, raw_bit, raw_name + '_proc_ggm')
 
 

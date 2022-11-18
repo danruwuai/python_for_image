@@ -19,3 +19,8 @@ test.py
 *.sdblk
 *.hwtbl
 *.lsc
+EXIF
+*.jpg
+*.tuning
+*.ispinfo
+*.exif

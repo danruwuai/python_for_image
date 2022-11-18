@@ -68,7 +68,11 @@ def raw_image_show_lsc(lsc_R, lsc_GR, lsc_GB, lsc_B, height, width, name):
     plt.suptitle(name)
     manager = plt.get_current_fig_manager()
     manager.window.showMaximized()
-    plt.show()
+    plt.ion()
+    plt.pause(30)
+    # plt.show()
+    plt.close()
+
 
     # ax=Axes3d(fig)
     """
@@ -79,22 +83,22 @@ def raw_image_show_lsc(lsc_R, lsc_GR, lsc_GB, lsc_B, height, width, name):
     Y = np.arange(0, height)
     X, Y = np.meshgrid(X, Y)
     # R = np.sqrt(X ** 2 + Y ** 2)
-    # 具体函数方法可用help(function)查看，如：help（ax.plot_surface)
+    # 具体函数方法可用help(function)查看，如:help(ax.plot_surface)
     # ax.plot_surface(X,Y,Z,rstride=1,cstride=1,cmap='rainbow')
     ax.plot_wireframe(X, Y, lsc_R, rstride=10, cstride=10, color='r')
     ax = plt.subplot(2, 2, 2, projection='3d')
     ax.set_title('LSC_GR')  # 设置标题
-    # 具体函数方法可用help(function)查看，如：help（ax.plot_surface)
+    # 具体函数方法可用help(function)查看,如:help(ax.plot_surface)
     # ax.plot_surface(X,Y,Z,rstride=1,cstride=1,cmap='rainbow')
     ax.plot_wireframe(X, Y, lsc_GR, rstride=10, cstride=10, color='g')
     ax = plt.subplot(2, 2, 3, projection='3d')
     ax.set_title('LSC_GB', y=-0.3)  # 设置标题
-    # 具体函数方法可用help(function)查看，如：help（ax.plot_surface)
+    # 具体函数方法可用help(function)查看，如:help(ax.plot_surface)
     # ax.plot_surface(X,Y,Z,rstride=1,cstride=1,cmap='rainbow')
     ax.plot_wireframe(X, Y, lsc_GB, rstride=10, cstride=10, color='g')
     ax = plt.subplot(2, 2, 4, projection='3d')
     ax.set_title('LSC_B', y=-0.3)  # 设置标题
-    # 具体函数方法可用help(function)查看，如：help（ax.plot_surface)
+    # 具体函数方法可用help(function)查看,如:help(ax.plot_surface)
     # ax.plot_surface(X,Y,Z,rstride=1,cstride=1,cmap='rainbow')
     ax.plot_wireframe(X, Y, lsc_B, rstride=10, cstride=10, color='b')
     manager = plt.get_current_fig_manager()
