@@ -42,7 +42,6 @@ def raw_image_show_3D(image, height, width):
 
 
 def raw_image_show_lsc(lsc_R, lsc_GR, lsc_GB, lsc_B, height, width, name):
-
     fig, ax = plt.subplots(2, 2, figsize=(10, 4.5))
     X = np.arange(0, width)
     Y = np.arange(0, height)
@@ -72,7 +71,6 @@ def raw_image_show_lsc(lsc_R, lsc_GR, lsc_GB, lsc_B, height, width, name):
     plt.pause(30)
     # plt.show()
     plt.close()
-
 
     # ax=Axes3d(fig)
     """
@@ -107,6 +105,7 @@ def raw_image_show_lsc(lsc_R, lsc_GR, lsc_GB, lsc_B, height, width, name):
     plt.show()
     """
     print('show')
+
 
 # 黑白小尺寸show
 def raw_image_show_thumbnail(image, height, width):
@@ -168,7 +167,7 @@ def test_case_fullsize():
 
 
 def test_case_thumbnail():
-    b = np.fromfile("image\Input_4032_3024_RGGB.raw", dtype="uint16")
+    b = np.fromfile('image\Input_4032_3024_RGGB.raw', dtype="uint16")
     print("b shape", b.shape)
     print('%#x' % b[0])
     b.shape = [3024, 4032]

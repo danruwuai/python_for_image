@@ -15,8 +15,10 @@ def get_aao_file(dir_path):
         # 获取完整路径
         # file_list.extend(os.path.join(root, file) for file in files if file.endswith("raw_word"))
         # 获取文件名
-        file_list_aao.extend(os.path.join("", file) for file in files if (file.endswith("aao") and os.path.isfile(file)))
-        file_list_aao.extend(os.path.join("", file) for file in files if (file.endswith("raw") and "aao_" in file and os.path.isfile(file)))
+        file_list_aao.extend(os.path.join("", file) for file in files if (
+                file.endswith("aao") and os.path.isfile(file)))
+        file_list_aao.extend(os.path.join("", file) for file in files if (
+                file.endswith("raw") and "aao_" in file and os.path.isfile(file)))
 
     return file_list_aao
 
@@ -49,13 +51,13 @@ def load_aao(flag):
             aao_height = 128
             current_height = 90
             aao_bytes = aao_height * aao_width * 32
-        elif aao_size == 524288:  #7平台后，128*128*32=524288
+        elif aao_size == 524288:  # 7平台后，128*128*32=524288
             aao_width = 128
             aao_height = 128
             current_height = 96
             aao_bytes = aao_height * aao_width * 32
         else:
-            print("尺寸不符,不能解析此aao:",file_aao)
+            print("尺寸不符,不能解析此aao:", file_aao)
             continue
         # 获取aao文件名称
         file_name = file_aao[:file_aao.find('.')]
@@ -94,7 +96,7 @@ def do_aao(frame_data, height, width, current_height, name, flag):
     frame_pixels[:, :, 0] = R_byte
     frame_pixels[:, :, 1] = G_byte
     frame_pixels[:, :, 2] = B_byte
-    #如果flag ==2,输出统计表格信息
+    # 如果flag ==2,输出统计表格信息
     if flag == 2:
         # 创建CSV表格数据，内容赋值空
         csv_data = np.full([6 * (current_height+3), width], -1)
@@ -194,9 +196,9 @@ def do_aao(frame_data, height, width, current_height, name, flag):
         # cv.imwrite(f'{raw_name}bmp', frame_raw)
         # imwrite默认输出的是BGR图片，所以需要RGB转换未BGR再输出。
         frame_pixels = frame_pixels.astype(np.float32)
-        cv.imwrite(name + '_high.bmp', cv.cvtColor(frame_pixels, cv.COLOR_RGBA2BGRA), [int(cv.IMWRITE_JPEG_QUALITY), 100])
+        cv.imwrite(name + '_high.bmp', cv.cvtColor(frame_pixels, cv.COLOR_RGBA2BGRA), [int(
+            cv.IMWRITE_JPEG_QUALITY), 100])
         print("输出18bit的aao图片:", name + '_high.bmp')
-
 
 
 if __name__ == "__main__":

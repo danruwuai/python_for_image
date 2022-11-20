@@ -270,7 +270,8 @@ def read_packed_word_yplane(file_path_name, height, width, bit, ph_height, pw_wi
     else:
         if ph_height == -1 and pw_width == -1 and bw_width == -1:
             # 调用函数获取实际width
-            new_width, width_real, width_byte_num, packet_num_L, width_flag = get_width_real(file_path_name, height, width)
+            new_width, width_real, width_byte_num, packet_num_L, width_flag = get_width_real(
+                file_path_name, height, width)
             print("width_flag:", width_flag)
             # 求对应的商和余值
             packet_num_L, Align_num = divmod(width_byte_num, 5)
@@ -315,8 +316,8 @@ def read_packed_word_yplane(file_path_name, height, width, bit, ph_height, pw_wi
             # 用矩阵的方法进行像素的拼接
             one_byte = np.left_shift(np.bitwise_and(two_byte, 3), 10) + np.left_shift(one_byte, 2)
             two_byte = np.bitwise_and(two_byte, 252) + np.left_shift(np.bitwise_and(three_byte, 15), 8)
-            three_byte = np.right_shift(np.bitwise_and(three_byte, 240), 2) + np.left_shift(np.bitwise_and(four_byte, 63),
-                                                                                            6)
+            three_byte = np.right_shift(np.bitwise_and(three_byte, 240), 2) + np.left_shift(np.bitwise_and(
+                four_byte, 63), 6)
             four_byte = np.right_shift(np.bitwise_and(four_byte, 192), 4) + np.left_shift(five_byte, 4)
             # 整合各通道数据到一起
             frame_pixels = np.zeros(shape=(height, new_width))
@@ -361,7 +362,8 @@ def read_packed_word_cplane(file_path_name, height, width, bit, ph_height, pw_wi
     else:
         if ph_height == -1 and pw_width == -1 and bw_width == -1:
             # 调用函数获取实际width
-            new_width, width_real, width_byte_num, packet_num_L, width_flag = get_width_real(file_path_name, height, width)
+            new_width, width_real, width_byte_num, packet_num_L, width_flag = get_width_real(
+                file_path_name, height, width)
             print("width_flag:", width_flag)
             # 求对应的商和余值
             packet_num_L, Align_num = divmod(width_byte_num, 5)
@@ -406,8 +408,8 @@ def read_packed_word_cplane(file_path_name, height, width, bit, ph_height, pw_wi
             # 用矩阵的方法进行像素的拼接
             one_byte = np.left_shift(np.bitwise_and(two_byte, 3), 10) + np.left_shift(one_byte, 2)
             two_byte = np.bitwise_and(two_byte, 252) + np.left_shift(np.bitwise_and(three_byte, 15), 8)
-            three_byte = np.right_shift(np.bitwise_and(three_byte, 240), 2) + np.left_shift(np.bitwise_and(four_byte, 63),
-                                                                                            6)
+            three_byte = np.right_shift(np.bitwise_and(three_byte, 240), 2) + np.left_shift(np.bitwise_and(
+                four_byte, 63), 6)
             four_byte = np.right_shift(np.bitwise_and(four_byte, 192), 4) + np.left_shift(five_byte, 4)
             # 整合各通道数据到一起
             frame_pixels = np.zeros(shape=(height, new_width))
@@ -481,7 +483,8 @@ def do_ycbcr(frame_y, frame_cb, frame_cr, height, width, yuv_name):
     # YUV 转 RGB
     rgb_img[:, :, 0] = cv.add(img_yuv[:, :, 0], 1.402 * (img_yuv[:, :, 2] - 128))  # R=Y+1.402*(Cr-128)
     # G = Y -0.344136*(Cr-128)-0.714136*(Cb-128)
-    rgb_img[:, :, 1] = cv.add(img_yuv[:, :, 0], - 0.34413 * (img_yuv[:, :, 1] - 128), -0.71414 * (img_yuv[:, :, 2] - 128))
+    rgb_img[:, :, 1] = cv.add(img_yuv[:, :, 0], - 0.34413 * (img_yuv[:, :, 1] - 128), -0.71414 * (
+            img_yuv[:, :, 2] - 128))
     rgb_img[:, :, 2] = cv.add(img_yuv[:, :, 0], 1.772 * (img_yuv[:, :, 1] - 128))  # B=Y+1.772*(Cb - 128)
     # 换算到0~255
     rgb_img = np.clip(rgb_img, 0, 255)
@@ -541,6 +544,7 @@ def read_packed_word_12(file_path_name, height, width, ph_height, pw_width, bw_w
         frame_pixels[:, 1:width:2] = two_byte[:, :]
 
         return frame_pixels[0:height, :]
+
 
 def transf_packed_to_raw(file_path_name, height, width, ph_height, pw_width, bw_width):
     print("exist PW PH and BW")
@@ -602,7 +606,7 @@ def transf_packed_to_raw(file_path_name, height, width, ph_height, pw_width, bw_
 
 def read_packed_word_cplane_12(file_path_name, height, width, ph_height, pw_width, bw_width):
     print("exist PW PH and BW")
-    packet_num_L =(width + 3 )// 4
+    packet_num_L = (width + 3) // 4
     width_byte_num = packet_num_L * 5  # 当行byte长度
     packet_num_L, Align_num = divmod(bw_width, 5)
     image_bytes = bw_width * ph_height  # 获取图片真实的大小

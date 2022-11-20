@@ -34,7 +34,7 @@ def do_ggm(img, bit):
     x.append(2**bit - 1)
     y.append(2**bit - 1)
     print(x, y)
-    #fun = splrep(x, y, )
+    # fun = splrep(x, y, )
     fun = interp1d(x, y, kind="cubic")
     # print(fun)
     x2 = np.arange(0, 2**bit-1, 1)
@@ -50,8 +50,6 @@ def do_ggm(img, bit):
     img = fun(img)
     # img = splev(img, fun)
     return img
-
-
 
 
 if __name__ == "__main__":

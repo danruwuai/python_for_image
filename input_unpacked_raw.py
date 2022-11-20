@@ -53,8 +53,8 @@ def load_raw():
         print("bit:", raw_bit)
         obj = Process(target=do_raw, args=(file_raw, raw_height, raw_width, raw_bayer, raw_bit))  # args
         # 以元组的形式给子进程func函数传位置参数
-        #obj.start()  # 执行子进程对象
-        do_raw(file_raw, raw_height, raw_width, raw_bayer, raw_bit)
+        obj.start()  # 执行子进程对象
+        # do_raw(file_raw, raw_height, raw_width, raw_bayer, raw_bit)
 
 
 def pure_raw_isp(image, raw_height, raw_width, raw_bit, raw_bayer, raw_name, dict_awb, awb_flag):
@@ -102,13 +102,14 @@ def do_raw(file_raw, raw_height, raw_width, raw_bayer, raw_bit):
     # show.raw_image_show_thumbnail(image, raw_height, raw_width)
     # do_pure_raw.histogram_show(frame_data, raw_bit)
     raw_name = file_raw[:file_raw.find('.')]
-    #获取raw图前面mask信息
+    # 获取raw图前面mask信息
     jpg_mask = raw_name[:19]
     print("jpg_mask:", jpg_mask)
-    dict_awb, dict_isp, awb_flag = do_awb.get_awb(jpg_mask)
+    dict_awb, dict_isp, dict_info, awb_flag = do_awb.get_awb(jpg_mask)
     # pure_raw_isp 子进程进入
-    obj = Process(target=pure_raw_isp,
-                  args=(frame_data, raw_height, raw_width, raw_bit, raw_bayer, raw_name, dict_awb, awb_flag))  # args以元组的形式给子进程func函数传位置参数
+    # args以元组的形式给子进程func函数传位置参数
+    obj = Process(target=pure_raw_isp, args=(
+        frame_data, raw_height, raw_width, raw_bit, raw_bayer, raw_name, dict_awb, awb_flag))
     # kwargs以字典的形式给子进程func函数传关键字参数
     # kwargs={'name': '小杨', 'age': 18}
     obj.start()  # 执行子进程对象
@@ -137,7 +138,7 @@ def do_raw(file_raw, raw_height, raw_width, raw_bayer, raw_bit):
             save_bmp(awb_data, raw_bit, raw_name + '_proc_awb')
             print("################################################################")
             # CCM处理
-            ccm_data = do_awb.do_ccm(awb_data, dict_isp)
+            ccm_data = do_awb.do_ccm(awb_data, dict_isp, dict_info)
             save_bmp(ccm_data, raw_bit, raw_name + '_proc_ccm')
             print("################################################################")
             # GGM处理
