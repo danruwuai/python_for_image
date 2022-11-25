@@ -1,0 +1,14 @@
+//
+//
+//
+filter_num                                          =1
+filter_x_start                                      =[handleAFin0/1](
+filter_x_end                                        =,
+filter_x_name                                       =Magic_num
+filter_x_remove                                     =
+filter_y_start                                      =SCD_D: chg/stb[
+filter_y_end                                        =/
+filter_y_name                                       =chg/stb
+filter_y_remove                                     =
+filter_color                                        =r
+filter_name                                         =chg/stb

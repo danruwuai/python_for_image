@@ -24,3 +24,5 @@ EXIF
 *.tuning
 *.ispinfo
 *.exif
+*.log
+*.txt
