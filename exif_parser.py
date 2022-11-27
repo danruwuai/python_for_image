@@ -53,7 +53,10 @@ def load_jpg_tuning():
             isp_p1reg_debug(dict_data["isp_p1reg_data"], dict_info, exif, exif_name)
             isp_p2reg_debug(dict_data["isp_p2reg_data"], dict_info, exif, exif_name)
             mfb_reg_debug(dict_data["mfb_reg_data"], dict_info, exif, exif_name)
-        awb_data_debug(dict_data["awb_debug_data"], dict_info, exif_name)
+            awb_data_debug_old(dict_data["awb_debug_data"], dict_info, exif_name)
+        else:
+            awb_data_debug_new(dict_data["awb_debug_data"], dict_info, exif_name)
+
 
 
 def load_jpg_data(file):
@@ -255,7 +258,8 @@ def import_exif_tuning(tuning_file_path):
                 isp_data[dict_info["awb_debug_data_offset"]] + 1, 8) + np.left_shift(
                     isp_data[dict_info["awb_debug_data_offset"]] + 2, 16) + np.left_shift(
                         isp_data[dict_info["awb_debug_data_offset"]] + 3, 24)
-            awb_debug_data = isp_data[dict_info["awb_debug_data_offset"]:dict_info["awb_debug_data_offset"] + awb_debug_size]
+            awb_debug_data = isp_data[dict_info[
+                                          "awb_debug_data_offset"]:dict_info["awb_debug_data_offset"] + awb_debug_size]
             awb_debug_data = awb_debug_data.astype("int32")
         else:
             # 获取ISP value的值
@@ -290,11 +294,12 @@ def import_exif_tuning(tuning_file_path):
                 mfb_reg_data[5], 8) + np.left_shift(mfb_reg_data[6], 16) + np.left_shift(mfb_reg_data[7], 24)
             mfb_reg_data_new = mfb_reg_data[8:(dict_info["mfb_reg_TableSize"] - 1) * 4]
 
-            awb_debug_size = isp_data[dict_info["awb_debug_data_offset"]] + np.left_shift(
+            awb_debug_size = (isp_data[dict_info["awb_debug_data_offset"]] + np.left_shift(
                 isp_data[dict_info["awb_debug_data_offset"]] + 1, 8) + np.left_shift(
                     isp_data[dict_info["awb_debug_data_offset"]] + 2, 16) + np.left_shift(
-                        isp_data[dict_info["awb_debug_data_offset"]] + 3, 24)
-            awb_debug_data = isp_data[dict_info["awb_debug_data_offset"]:dict_info["awb_debug_data_offset"] + awb_debug_size]
+                        isp_data[dict_info["awb_debug_data_offset"]] + 3, 24)).astype("uint32")
+            awb_debug_data = isp_data[
+                             dict_info["awb_debug_data_offset"]:dict_info["awb_debug_data_offset"] + awb_debug_size]
             awb_debug_data = awb_debug_data.astype("int32")
 
         if dict_info["isp_modulecount"] == 0x30002:
@@ -307,7 +312,9 @@ def import_exif_tuning(tuning_file_path):
             dict_data["isp_p1reg_data"] = cal_isp_value(isp_p1reg_data_new, (dict_info["isp_p1reg_TableSize"]-1)*4)
             dict_data["isp_p2reg_data"] = cal_isp_value(isp_p2reg_data_new, (dict_info["isp_p2reg_TableSize"]-1)*4)
             dict_data["mfb_reg_data"] = cal_isp_value(mfb_reg_data_new, (dict_info["mfb_reg_TableSize"]-1)*4)
-            dict_data["awb_debug_data"] = cal_aaa_value(awb_debug_data, awb_debug_size)
+            dict_data["awb_debug_data"] = cal_isp_value(awb_debug_data, awb_debug_size)
+    if not ISP_flag and not AAA_flag:
+        exit()
     return dict_data, dict_info
 
 
@@ -338,7 +345,8 @@ def cal_af_value(af_tuning_data, af_tuning_size):
 
 
 def cal_isp_value(tuning_data, tuning_size):
-    return tuning_data[:tuning_size:4] + np.left_shift(tuning_data[1:tuning_size:4], 8) + np.left_shift(tuning_data[2:tuning_size:4], 16) + np.left_shift(tuning_data[3:tuning_size:4], 24)
+    return tuning_data[:tuning_size:4] + np.left_shift(tuning_data[1:tuning_size:4], 8) + np.left_shift(
+        tuning_data[2:tuning_size:4], 16) + np.left_shift(tuning_data[3:tuning_size:4], 24)
 
 
 def cal_ae_data_value(tuning_data, tuning_size):
@@ -1132,7 +1140,7 @@ def save_mfb_reg_exif(dict_mfb_reg, dict_info, reg_tag_data, reg_size, exif_name
 
 
 # awb_data_debug分析
-def awb_data_debug(awb_debug_data, dict_info, exif_name):
+def awb_data_debug_new(awb_debug_data, dict_info, exif_name):
     dict_awb_debug = {}
     dict_awb_debug["size"] = awb_debug_data[0]
     dict_awb_debug["is_awb_auto_mode"] = awb_debug_data[1]  # 1:auto mode
@@ -1143,8 +1151,8 @@ def awb_data_debug(awb_debug_data, dict_info, exif_name):
     dict_awb_debug["sensor_height"] = awb_debug_data[6]
     dict_awb_debug["offset_h"] = awb_debug_data[7]
     dict_awb_debug["offset_v"] = awb_debug_data[8]
-    dict_awb_debug["parent_blk_width"] = awb_debug_data[5]
-    dict_awb_debug["parent_blk_height"] = awb_debug_data[6]
+    dict_awb_debug["parent_blk_width"] = awb_debug_data[9]
+    dict_awb_debug["parent_blk_height"] = awb_debug_data[10]
     parent_blk_num = dict_awb_debug["parent_blk_num_y"] * dict_awb_debug["parent_blk_num_x"]
     sum_r = np.zeros(parent_blk_num).astype("uint32")
     sum_g = np.zeros(parent_blk_num).astype("uint32")
@@ -1162,11 +1170,11 @@ def awb_data_debug(awb_debug_data, dict_info, exif_name):
     sum_b[1::2] = np.right_shift(np.bitwise_and(awb_debug_data[11 + parent_blk_num // 2 * 2: 11 + parent_blk_num // 2 * 3], 0xFFFF0000), 16)
     sum_b.shape = [dict_awb_debug["parent_blk_num_y"], dict_awb_debug["parent_blk_num_x"]]
     dict_awb_debug["sum_b"] = sum_b
-    sum_rgblight[:,:,0] = sum_r
-    sum_rgblight[:,:,1] = sum_g
-    sum_rgblight[:,:,2] = sum_b
+    sum_rgblight[:, :, 0] = sum_r
+    sum_rgblight[:, :, 1] = sum_g
+    sum_rgblight[:, :, 2] = sum_b
     obj = Process(target=show_awb_debug_data, args=(sum_rgblight[:, :, 0:3], dict_awb_debug["parent_blk_num_x"], dict_awb_debug[
-        "parent_blk_num_y"]))
+        "parent_blk_num_y"], 8))
     obj.start()
     
     light = np.zeros(parent_blk_num).astype("uint32")
@@ -1219,9 +1227,174 @@ def awb_data_debug(awb_debug_data, dict_info, exif_name):
     return dict_awb_debug
 
 
+"""
+      MINT32 i4Size; // sizeof(AWB_DEBUG_DATA_T)
+      // Is AWB auto mode
+      MINT32 i4IsAWBAutoMode; // 0: false, 1: true
+      // Is strobe fired
+      MINT32 i4IsStrobeFired; // 0: strobe is not fired ==> do not draw light area of strobe
+      // Parent block number
+      MINT32 i4ParentBlkNum_X;
+      MINT32 i4ParentBlkNum_Y;
+      // Sensor dimension
+      MINT32 i4SensorWidth;
+      MINT32 i4SensorHeight;
+      // horizontal and vertical Offset of the first parent block (upper left)
+      MINT32 i4OffsetH;
+      MINT32 i4OffsetV;
+      // Parent block info
+      MINT32 i4ParentBlkWidth;
+      MINT32 i4ParentBlkHeight;
+  	MINT32 i4SumR[DBG_AWB_PARENT_BLK_NUM_MAX_Y][DBG_AWB_PARENT_BLK_NUM_MAX_X]; // R summation of specified light source of specified parent block
+  	MINT32 i4SumG[DBG_AWB_PARENT_BLK_NUM_MAX_Y][DBG_AWB_PARENT_BLK_NUM_MAX_X]; // G summation of specified light source of specified parent block
+  	MINT32 i4SumB[DBG_AWB_PARENT_BLK_NUM_MAX_Y][DBG_AWB_PARENT_BLK_NUM_MAX_X]; // B summation of specified light source of specified parent block
+  	MINT32 i4ChildBlkNum[DBG_AWB_PARENT_BLK_NUM_MAX_Y][DBG_AWB_PARENT_BLK_NUM_MAX_X]; // Child block number of specified light source of specified parent block
+  	MINT32 i4Light[DBG_AWB_PARENT_BLK_NUM_MAX_Y][DBG_AWB_PARENT_BLK_NUM_MAX_X]; // Light source of specified parent block
+      // XY coordinate as the central point of debug image
+      MINT32 i4CentralX; // D65
+      MINT32 i4CentralY; // D65
+      // Rotation matrix
+      MINT32 i4Cos;
+      MINT32 i4Sin;
+      // Strobe light area
+      MINT32 i4RightBound_Strobe;
+      MINT32 i4LeftBound_Strobe;
+      MINT32 i4UpperBound_Strobe;
+      MINT32 i4LowerBound_Strobe;
+      // Tungsten light area
+      MINT32 i4RightBound_Tungsten;
+      MINT32 i4LeftBound_Tungsten;
+      MINT32 i4UpperBound_Tungsten;
+      MINT32 i4LowerBound_Tungsten;
+      // Warm fluorescent light area
+      MINT32 i4RightBound_WarmFluorescent;
+      MINT32 i4LeftBound_WarmFluorescent;
+      MINT32 i4UpperBound_WarmFluorescent;
+      MINT32 i4LowerBound_WarmFluorescent;
+      // Fluorescent light area
+      MINT32 i4RightBound_Fluorescent;
+      MINT32 i4LeftBound_Fluorescent;
+      MINT32 i4UpperBound_Fluorescent;
+      MINT32 i4LowerBound_Fluorescent;
+      // CWF light area
+      MINT32 i4RightBound_CWF;
+      MINT32 i4LeftBound_CWF;
+      MINT32 i4UpperBound_CWF;
+      MINT32 i4LowerBound_CWF;
+      // Daylight light area
+      MINT32 i4RightBound_Daylight;
+      MINT32 i4LeftBound_Daylight;
+      MINT32 i4UpperBound_Daylight;
+      MINT32 i4LowerBound_Daylight;
+      // Shade light area
+      MINT32 i4RightBound_Shade;
+      MINT32 i4LeftBound_Shade;
+      MINT32 i4UpperBound_Shade;
+      MINT32 i4LowerBound_Shade;
+      // Daylight fluorescent light area
+      MINT32 i4RightBound_DaylightFluorescent;
+      MINT32 i4LeftBound_DaylightFluorescent;
+      MINT32 i4UpperBound_DaylightFluorescent;
+      MINT32 i4LowerBound_DaylightFluorescent;
+  } AWB_DEBUG_DATA_T; 
+"""
+
+
+def awb_data_debug_old(awb_debug_data, dict_info, exif_name):
+    dict_awb_debug = {}
+    dict_awb_debug["size"] = awb_debug_data[0]
+    dict_awb_debug["is_awb_auto_mode"] = awb_debug_data[1]  # 1:auto mode
+    dict_awb_debug["is_strobe_fired"] = awb_debug_data[2]  # 0:strobe is not fired
+    dict_awb_debug["parent_blk_num_x"] = awb_debug_data[3]
+    dict_awb_debug["parent_blk_num_y"] = awb_debug_data[4]
+    dict_awb_debug["sensor_width"] = awb_debug_data[5]
+    dict_awb_debug["sensor_height"] = awb_debug_data[6]
+    dict_awb_debug["offset_h"] = awb_debug_data[7]
+    dict_awb_debug["offset_v"] = awb_debug_data[8]
+    dict_awb_debug["parent_blk_width"] = awb_debug_data[9]
+    dict_awb_debug["parent_blk_height"] = awb_debug_data[10]
+    pb_num_size = (dict_awb_debug["parent_blk_num_x"] + 1) ** 2
+    parent_blk_num = dict_awb_debug["parent_blk_num_y"] * dict_awb_debug["parent_blk_num_x"]
+    sum_r_data = np.zeros(pb_num_size).astype("uint32")
+    sum_g_data = np.zeros(pb_num_size).astype("uint32")
+    sum_b_data = np.zeros(pb_num_size).astype("uint32")
+    sum_rgblight = np.zeros(shape=(dict_awb_debug["parent_blk_num_y"], dict_awb_debug["parent_blk_num_x"], 4)).astype("uint32")
+    sum_r_data = awb_debug_data[11:11 + pb_num_size]
+    sum_r_data.shape = [dict_awb_debug["parent_blk_num_x"] + 1, dict_awb_debug["parent_blk_num_x"] + 1]
+    sum_r = sum_r_data[0:dict_awb_debug["parent_blk_num_y"], 0:dict_awb_debug["parent_blk_num_x"]]
+    dict_awb_debug["sum_r"] = sum_r
+    sum_g_data = awb_debug_data[11 + pb_num_size: 11 + pb_num_size * 2]
+    sum_g_data.shape = [dict_awb_debug["parent_blk_num_x"] + 1, dict_awb_debug["parent_blk_num_x"] + 1]
+    sum_g = sum_g_data[0:dict_awb_debug["parent_blk_num_y"], 0:dict_awb_debug["parent_blk_num_x"]]
+    dict_awb_debug["sum_g"] = sum_g
+    sum_b_data = awb_debug_data[11 + pb_num_size * 2: 11 + pb_num_size * 3]
+    sum_b_data.shape = [dict_awb_debug["parent_blk_num_x"] + 1, dict_awb_debug["parent_blk_num_x"] + 1]
+    sum_b = sum_b_data[0:dict_awb_debug["parent_blk_num_y"], 0:dict_awb_debug["parent_blk_num_x"]]
+    dict_awb_debug["sum_b"] = sum_b_data
+    sum_rgblight[:, :, 0] = sum_r
+    sum_rgblight[:, :, 1] = sum_g
+    sum_rgblight[:, :, 2] = sum_b
+    obj = Process(target=show_awb_debug_data,
+                  args=(sum_rgblight[:, :, 0:3], dict_awb_debug["parent_blk_num_x"], dict_awb_debug[
+                      "parent_blk_num_y"], 12))
+    obj.start()
+    child_blk_num = np.zeros(pb_num_size).astype("uint32")
+    child_blk_num = awb_debug_data[11 + pb_num_size * 3: 11 + pb_num_size * 4]
+    child_blk_num.shape = [dict_awb_debug["parent_blk_num_x"] + 1, dict_awb_debug["parent_blk_num_x"] + 1]
+    child_blk_num = child_blk_num[0:dict_awb_debug["parent_blk_num_y"], 0:dict_awb_debug["parent_blk_num_x"]]
+    dict_awb_debug["child_blk_num"] = child_blk_num
+    light = np.zeros(pb_num_size).astype("uint32")
+    light = awb_debug_data[11 + pb_num_size * 4: 11 + pb_num_size * 5]
+    light.shape = [dict_awb_debug["parent_blk_num_x"] + 1, dict_awb_debug["parent_blk_num_x"] + 1]
+    light = light[0:dict_awb_debug["parent_blk_num_y"], 0:dict_awb_debug["parent_blk_num_x"]]
+    sum_rgblight[:, :, 3] = light
+    dict_awb_debug["sum_rgblight"] = sum_rgblight
+    dict_awb_debug["light"] = light
+
+    dict_awb_debug["central_x"] = awb_debug_data[11 + pb_num_size * 5]
+    dict_awb_debug["central_y"] = awb_debug_data[11 + pb_num_size * 5 + 1]
+    dict_awb_debug["cos"] = awb_debug_data[11 + pb_num_size * 5 + 2]
+    dict_awb_debug["sin"] = awb_debug_data[11 + pb_num_size * 5 + 3]
+    dict_awb_debug["right_bound_strobe"] = awb_debug_data[11 + pb_num_size * 5 + 4]
+    dict_awb_debug["left_bound_strobe"] = awb_debug_data[11 + pb_num_size * 5 + 5]
+    dict_awb_debug["upper_bound_strobe"] = awb_debug_data[11 + pb_num_size * 5 + 6]
+    dict_awb_debug["lower_bound_strobe"] = awb_debug_data[11 + pb_num_size * 5 + 7]
+    dict_awb_debug["right_bound_tungsten"] = awb_debug_data[11 + pb_num_size * 5 + 8]
+    dict_awb_debug["left_bound_tungsten"] = awb_debug_data[11 + pb_num_size * 5 + 9]
+    dict_awb_debug["upper_bound_tungsten"] = awb_debug_data[11 + pb_num_size * 5 + 10]
+    dict_awb_debug["lower_bound_tungsten"] = awb_debug_data[11 + pb_num_size * 5 + 11]
+    dict_awb_debug["right_bound_warmfluorescent"] = awb_debug_data[11 + pb_num_size * 5 + 12]
+    dict_awb_debug["left_bound_warmfluorescent"] = awb_debug_data[11 + pb_num_size * 5 + 13]
+    dict_awb_debug["upper_bound_warmfluorescent"] = awb_debug_data[11 + pb_num_size * 5 + 14]
+    dict_awb_debug["lower_bound_warmfluorescent"] = awb_debug_data[11 + pb_num_size * 5 + 15]
+    dict_awb_debug["right_bound_fluorescent"] = awb_debug_data[11 + pb_num_size * 5 + 16]
+    dict_awb_debug["left_bound_fluorescent"] = awb_debug_data[11 + pb_num_size * 5 + 17]
+    dict_awb_debug["upper_bound_fluorescent"] = awb_debug_data[11 + pb_num_size * 5 + 18]
+    dict_awb_debug["lower_bound_fluorescent"] = awb_debug_data[11 + pb_num_size * 5 + 19]
+    dict_awb_debug["right_bound_cwf"] = awb_debug_data[11 + pb_num_size * 5 + 20]
+    dict_awb_debug["left_bound_cwf"] = awb_debug_data[11 + pb_num_size * 5 + 21]
+    dict_awb_debug["upper_bound_cwf"] = awb_debug_data[11 + pb_num_size * 5 + 22]
+    dict_awb_debug["lower_bound_cwf"] = awb_debug_data[11 + pb_num_size * 5 + 23]
+    dict_awb_debug["right_bound_daylight"] = awb_debug_data[11 + pb_num_size * 5 + 24]
+    dict_awb_debug["left_bound_daylight"] = awb_debug_data[11 + pb_num_size * 5 + 25]
+    dict_awb_debug["upper_bound_daylight"] = awb_debug_data[11 + pb_num_size * 5 + 26]
+    dict_awb_debug["lower_bound_daylight"] = awb_debug_data[11 + pb_num_size * 5 + 27]
+    dict_awb_debug["right_bound_shade"] = awb_debug_data[11 + pb_num_size * 5 + 28]
+    dict_awb_debug["left_bound_shade"] = awb_debug_data[11 + pb_num_size * 5 + 29]
+    dict_awb_debug["upper_bound_shade"] = awb_debug_data[11 + pb_num_size * 5 + 30]
+    dict_awb_debug["lower_bound_shade"] = awb_debug_data[11 + pb_num_size * 5 + 31]
+    dict_awb_debug["right_bound_daylightfluorescent"] = awb_debug_data[11 + pb_num_size * 5 + 32]
+    dict_awb_debug["left_bound_daylightfluorescent"] = awb_debug_data[11 + pb_num_size * 5 + 33]
+    dict_awb_debug["upper_bound_daylightfluorescent"] = awb_debug_data[11 + pb_num_size * 5 + 34]
+    dict_awb_debug["lower_bound_daylightfluorescent"] = awb_debug_data[11 + pb_num_size * 5 + 35]
+
+    return dict_awb_debug
+
+
 # 显示AWB debug data
-def show_awb_debug_data(data, x, y):
-    sum_rgb_plt = data / 255.0
+def show_awb_debug_data(data, x, y, bits):
+    sum_rgb_plt = data / (2 ** bits)
+    sum_rgb_plt = sum_rgb_plt.clip(0, 1)
     plt.figure(num='debug_rgb', figsize=(x / 10, y / 10))
     plt.imshow(sum_rgb_plt, interpolation='bicubic', vmax=1.0)
     plt.xticks([]), plt.yticks([])

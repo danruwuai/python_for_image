@@ -10,5 +10,38 @@ filter_y_start                                      =SCD_D: chg/stb[
 filter_y_end                                        =/
 filter_y_name                                       =chg/stb
 filter_y_remove                                     =
+filter_annotate_start                               =StatusC=
+filter_annotate_end                                 =,
+filter_annotate_remove                              =
 filter_color                                        =r
 filter_name                                         =chg/stb
+//
+filter_num                                          =2
+filter_x_start                                      =[handleAFin0/1](
+filter_x_end                                        =,
+filter_x_name                                       =Magic_num
+filter_x_remove                                     =
+filter_y_start                                      =SCD_D: PD Tgt
+filter_y_end                                        = Cur
+filter_y_name                                       =PD_Tgt
+filter_y_remove                                     =
+filter_annotate_start                               =StatusC=
+filter_annotate_end                                 =,
+filter_annotate_remove                              =
+filter_color                                        =b
+filter_name                                         =PD
+//
+filter_num                                          =3
+filter_x_start                                      =dacCurr
+filter_x_end                                        = dacEq
+filter_x_name                                       =DAC
+filter_x_remove                                     =
+filter_y_start                                      = fv
+filter_y_end                                        = inputFlag
+filter_y_name                                       =FV
+filter_y_remove                                     =
+filter_annotate_start                               =StatusC=
+filter_annotate_end                                 =,
+filter_annotate_remove                              =
+filter_color                                        =b
+filter_name                                         =FV
