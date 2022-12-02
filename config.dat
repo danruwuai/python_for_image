@@ -1,26 +1,50 @@
-//
-//
-//
+//   filter_num               第几个子图
+//   filter_count_start       检测数据顺序起始值
+//   filter_count_end         检测数据顺序结束值
+//   filter_count_remove      移除异常关键字
+//   filter_x_start           检测X轴起始值
+//   filter_x_end             检测X轴结束值
+//   filter_x_name            X轴名称
+//   filter_x_remove          移除X轴异常关键字
+//   filter_y_start           检测Y轴起始值
+//   filter_y_end             检测Y轴结束值
+//   filter_y_name            Y轴名称
+//   filter_y_remove          移除Y轴异常关键字
+//   filter_annotate_start    注释起始值
+//   filter_annotate_end      注释结束值
+//   filter_annotate_remove   注释异常关键字
+//   filter_color             图像颜色
+//   filter_name              图像名称
+//   filter_y_threshold       Y轴阈值标记
+//   filter_x_mark            X轴标记
 filter_num                                          =1
+filter_count_start                                  =[handleAFin0/1](
+filter_count_end                                    =,
+filter_count_remove                                 =Mode=6
 filter_x_start                                      =[handleAFin0/1](
 filter_x_end                                        =,
 filter_x_name                                       =Magic_num
-filter_x_remove                                     =
-filter_y_start                                      =SCD_D: chg/stb[
-filter_y_end                                        =/
-filter_y_name                                       =chg/stb
+filter_x_remove                                     =Mode=6
+filter_y_start                                      =SCD_D: chg/stb[|AE[
+filter_y_end                                        =/|/
+filter_y_name                                       =chg/stb|AE_change
 filter_y_remove                                     =
 filter_annotate_start                               =StatusC=
 filter_annotate_end                                 =,
 filter_annotate_remove                              =
-filter_color                                        =r
+filter_color                                        =b|g
 filter_name                                         =chg/stb
+filter_y_threshold                                  =
+filter_x_mark                                       =capture intent: 2
 //
 filter_num                                          =2
+filter_count_start                                  =[handleAFin0/1](
+filter_count_end                                    =,
+filter_count_remove                                 =Mode=6
 filter_x_start                                      =[handleAFin0/1](
 filter_x_end                                        =,
 filter_x_name                                       =Magic_num
-filter_x_remove                                     =
+filter_x_remove                                     =Mode=6
 filter_y_start                                      =SCD_D: PD Tgt
 filter_y_end                                        = Cur
 filter_y_name                                       =PD_Tgt
@@ -30,8 +54,13 @@ filter_annotate_end                                 =,
 filter_annotate_remove                              =
 filter_color                                        =b
 filter_name                                         =PD
+filter_y_threshold                                  =
+filter_x_mark                                       =capture intent: 2
 //
 filter_num                                          =3
+filter_count_start                                  =pointCount 
+filter_count_end                                    = dacNext
+filter_count_remove                                 =
 filter_x_start                                      =dacCurr
 filter_x_end                                        = dacEq
 filter_x_name                                       =DAC
@@ -45,3 +74,25 @@ filter_annotate_end                                 =,
 filter_annotate_remove                              =
 filter_color                                        =b
 filter_name                                         =FV
+filter_y_threshold                                  =
+filter_x_mark                                       =capture intent: 2
+//
+filter_num                                          =4
+filter_count_start                                  =[handleAFin0/1](
+filter_count_end                                    =,
+filter_count_remove                                 =Mode=6
+filter_x_start                                      =[handleAFin0/1](
+filter_x_end                                        =,
+filter_x_name                                       =Magic_num
+filter_x_remove                                     =Mode=6
+filter_y_start                                      =GYRO[|GYRO(ref,cur,stb) (
+filter_y_end                                        =/|,
+filter_y_name                                       =GYRO_chg|Gyro
+filter_y_remove                                     =
+filter_annotate_start                               =StatusC=
+filter_annotate_end                                 =,
+filter_annotate_remove                              =
+filter_color                                        =b|g
+filter_name                                         =GYRO
+filter_y_threshold                                  =10
+filter_x_mark                                       =capture intent: 2
