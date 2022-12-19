@@ -63,6 +63,7 @@ def raw_image_show_lsc(lsc_R, lsc_GR, lsc_GB, lsc_B, height, width, name):
     ax[1][1].axis('off')
     ax[1][1] = fig.add_subplot(2, 2, 4, projection='3d')
     ax[1][1].plot_wireframe(X, Y, lsc_B, rstride=100, cstride=100, color='b')
+    plt.savefig('Result/' + name + '.jpg', bbox_inches='tight', dpi=300)
     # plt.tight_layout(pad=0.5, w_pad=0.5, h_pad=2.0)
     # 全屏显示
     plt.suptitle(name)
@@ -125,24 +126,24 @@ def raw_image_show_raw(R, GR, GB, B, height, width, name):
     ax[0][0].axis('off')
     ax[0][0] = fig.add_subplot(2, 2, 1, projection='3d')
     ax[0][0].plot_wireframe(X, Y, R, rstride=width // 8, cstride=height // 8, color='r')
-    ax[0][0].set_zlim(R.min(),R.max())
-    ax[0][1].set_title('LSC_GR', color='g', loc="left")  # 设置标题
+    ax[0][0].set_zlim(R.min(), R.max())
+    ax[0][1].set_title('GR', color='g', loc="left")  # 设置标题
     ax[0][1].axis('off')
     ax[0][1] = fig.add_subplot(2, 2, 2, projection='3d')
     ax[0][1].plot_wireframe(X, Y, GR, rstride=width // 8, cstride=height // 8, color='g')
-    ax[0][1].set_zlim(GR.min(),GR.max())
+    ax[0][1].set_zlim(GR.min(), GR.max())
     ax[1][0].set_title('GB', color='g', loc="left")  # 设置标题
     ax[1][0].axis('off')
     ax[1][0] = fig.add_subplot(2, 2, 3, projection='3d')
     ax[1][0].plot_wireframe(X, Y, GB, rstride=width // 8, cstride=height // 8, color='g')
-    ax[1][0].set_zlim(GB.min(),GB.max())
+    ax[1][0].set_zlim(GB.min(), GB.max())
     ax[1][1].set_title('B', color='b', loc="left")  # 设置标题
     ax[1][1].axis('off')
     ax[1][1] = fig.add_subplot(2, 2, 4, projection='3d')
     ax[1][1].plot_wireframe(X, Y, B, rstride=width // 8, cstride=height // 8, color='b')
-    ax[1][1].set_zlim(B.min(),B.max())
+    ax[1][1].set_zlim(B.min(), B.max())
     # plt.tight_layout(pad=0.5, w_pad=0.5, h_pad=2.0)
-    plt.savefig(name+'.jpg',bbox_inches='tight',dpi=300)
+    plt.savefig('Result/' + name+'.jpg', bbox_inches='tight', dpi=300)
     # 全屏显示
     plt.suptitle(name)
     manager = plt.get_current_fig_manager()
@@ -157,9 +158,9 @@ def raw_image_show_raw(R, GR, GB, B, height, width, name):
     # manager.window.showMaximized()
 
     plt.ion()
-    plt.pause(30)
+    plt.pause(60)
     # plt.show()
-    # plt.close()
+    plt.close()
 
     # ax=Axes3d(fig)
     """
