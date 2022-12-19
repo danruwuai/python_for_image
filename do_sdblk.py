@@ -21,6 +21,19 @@ def get_lsc_file(dir_path):
     return file_list
 
 
+def get_lsc_mask_file(dir_path, sdblk_mask):
+    file_list = []
+    for root, dirs, files in os.walk(dir_path):
+        # 获取完整路径
+        # file_list.extend(os.path.join(root, file) for file in files if file.endswith("raw_word"))
+        # 获取文件名
+        for file in files:
+            if (file.endswith("lsc") and os.path.isfile(file)) and file[:17] == sdblk_mask:
+                return file, True
+
+    return False, False
+
+
 def get_sdblk_file(dir_path, sdblk_mask):
     file_list = []
     for root, dirs, files in os.walk(dir_path):
@@ -28,7 +41,7 @@ def get_sdblk_file(dir_path, sdblk_mask):
         # file_list.extend(os.path.join(root, file) for file in files if file.endswith("raw_word"))
         # 获取文件名
         for file in files:
-            if (file.endswith("sdblk") and os.path.isfile(file)) and file[:19] == sdblk_mask:
+            if (file.endswith("sdblk") and os.path.isfile(file)) and file[:17] == sdblk_mask:
                 return file, True
 
     return False, False
@@ -104,6 +117,7 @@ def transform_lsc_data(lsc_file_path):
     print(hwtbl_file_path, sdblk_file_path)
     with open(hwtbl_file_path, "w") as hwtbl_file:
         with open(sdblk_file_path, "w") as sdblk_file:
+            lsc_new = 0
             lsc_size = os.path.getsize(lsc_file_path)
             print(lsc_size)
             lsc_file = np.fromfile(lsc_file_path, count=lsc_size, dtype="uint16")
@@ -118,17 +132,46 @@ def transform_lsc_data(lsc_file_path):
             blk_wd_last = lsc_file[16] + np.left_shift(lsc_file[17], 8)
             blk_ht_last = lsc_file[18] + np.left_shift(lsc_file[19], 8)
             unknown = lsc_file[20] + np.left_shift(lsc_file[21], 8)
-            print(width, height, blk_num_w, blk_num_h, blk_num_x, blk_num_y, blk_wd, blk_ht, blk_wd_last, blk_ht_last,
-                  unknown)
-            sdblk_file.write('%9d%9d%9d%9d%9d%9d%9d%9d\n' % (0, 0, blk_wd, blk_ht, blk_num_x, blk_num_y, blk_wd_last,
-                                                             blk_ht_last))
-            for i in range((blk_num_w - 1) * (blk_num_h - 1) * 4 * 12):
-                sdblk_file.write('%9d' % (lsc_file[i + 22]))
-                if i % 2 == 1:
-                    hwtbl_file.write("0x%08x, " % (lsc_file[i + 21] + (int(lsc_file[i + 22]) << 16)))
-                if i % 12 == 11:
-                    sdblk_file.write('\n')
-                    hwtbl_file.write("\n")
+            if abs(unknown - blk_wd_last) <= 1:
+                blk_wd_last1 = unknown
+                blk_ht_last1 = lsc_file[22] + np.left_shift(lsc_file[23], 8)
+                unknown = lsc_file[24] + np.left_shift(lsc_file[25], 8)
+                lsc_new = 1
+            if lsc_new == 1:
+                print(width, height, blk_num_w, blk_num_h, blk_num_x, blk_num_y, blk_wd, blk_ht,
+                      blk_wd_last, blk_ht_last, blk_wd_last1, blk_ht_last1, unknown)
+                sdblk_file.write('%9d%10d%10d%10d%10d%10d%10d%10d%10d%10d\n' % (
+                    0, 0, blk_wd, blk_ht, blk_num_x, blk_num_y, blk_wd_last, blk_ht_last, blk_wd_last1, blk_ht_last1))
+                sdblk_data_path = lsc_file[26:]
+                sdblk_data = np.zeros(len(sdblk_data_path)*2)
+                sdblk_data[::2] = np.bitwise_and(sdblk_data_path, 0xFF)
+                sdblk_data[1::2] = np.right_shift(np.bitwise_and(sdblk_data_path, 0xFF00), 8)
+                sdblk_data = sdblk_data.astype("uint32")
+                for i in range((blk_num_w - 1) * (blk_num_h - 1) * 4 * 12):
+                    if i % 3 == 0:
+                        sdblk_file.write('%9d' % (sdblk_data_path[i // 3 * 4] + np.left_shift(np.bitwise_and(sdblk_data_path[i // 3 * 4 + 1],0xf),16)))
+                    elif i % 3 == 1:
+                        sdblk_file.write('%9d' % (np.right_shift(np.bitwise_and(sdblk_data_path[i // 3 * 4 + 1], 0xfff0), 4) + np.left_shift(np.bitwise_and(sdblk_data_path[i // 3 * 4 + 2],0xff),12)))
+                    else:
+                        sdblk_file.write('%9d' % (np.right_shift(np.bitwise_and(sdblk_data_path[i // 3 * 4 + 2], 0xff00), 8) + np.left_shift(np.bitwise_and(sdblk_data_path[i // 3 * 4 + 3],0xfff),8)))
+                    if i % 2 == 1:
+                        hwtbl_file.write("0x%08x, " % (sdblk_data_path[i-1] + (int(sdblk_data_path[i]) << 16)))
+                    if i % 16 == 15:
+                        hwtbl_file.write("\n")
+                    if i % 12 == 11:
+                        sdblk_file.write('\n')
+            else: 
+                print(width, height, blk_num_w, blk_num_h, blk_num_x, blk_num_y, blk_wd, blk_ht,
+                      blk_wd_last, blk_ht_last, unknown)
+                sdblk_file.write('%9d%9d%9d%9d%9d%9d%9d%9d\n' % (
+                    0, 0, blk_wd, blk_ht, blk_num_x, blk_num_y, blk_wd_last, blk_ht_last))
+                for i in range((blk_num_w - 1) * (blk_num_h - 1) * 4 * 12):
+                    sdblk_file.write('%9d' % (lsc_file[i + 22]))
+                    if i % 2 == 1:
+                        hwtbl_file.write("0x%08x, " % (lsc_file[i + 21] + (int(lsc_file[i + 22]) << 16)))
+                    if i % 12 == 11:
+                        sdblk_file.write('\n')
+                        hwtbl_file.write("\n")
 
 
 def transf_lsc(sdblk_file_path, bayer):  # sourcery skip: low-code-quality
@@ -487,7 +530,7 @@ def lsc_to_csv(image, name):
     # 创建CSV表格数据，内容赋值空
     csv_data = image
     csv_data = csv_data.astype('str')
-    np.savetxt(f'{name}.csv', csv_data, delimiter=",", fmt='%s')
+    np.savetxt(f'Result/{name}.csv', csv_data, delimiter=",", fmt='%s')
     print("输出raw统计数据:", f'{name}.csv')
 
 
@@ -497,12 +540,8 @@ def do_lsc_for_raw(image, bayer, sdblk_mask):
     # 路径下对应sdblk文件
     sdblk_file, sdblk_flag = get_sdblk_file(current_working_dir, sdblk_mask)
     if not sdblk_flag:
-        file_lsc_list = get_lsc_file(current_working_dir)
-        lsc_flag = False
-        for lsc_file_path in file_lsc_list:
-            if lsc_file_path[:19] == sdblk_mask:
-                lsc_flag = True
-                break
+        # 获取lsc文件
+        lsc_file_path, lsc_flag = get_lsc_mask_file(current_working_dir, sdblk_mask)
         if not lsc_flag:
             return image, False
         transform_lsc_data(lsc_file_path)
@@ -545,10 +584,11 @@ def do_lsc_for_raw(image, bayer, sdblk_mask):
 if __name__ == "__main__":
     print('This is main of module')
     # hwtbl_file = "093809365-0093-0000-main-MFNR_Before_Blend_LSC2.hwtbl"
-    sdblk_file = "190331773-4433-4436-main-Capture-BFBLD_BASE-LSC.sdblk"
-    # lsc_file = "011928646-0932-0935-main3-profile_LSC2.lsc"
+    # sdblk_file = "190331773-4433-4436-main-Capture-BFBLD_BASE-LSC.sdblk"
+    lsc_file = "044829775-0074-0079-main-Capture-BFBLD_BASE-LSC.lsc"
     # import_exif_hwtbl(hwtbl_file)
     # import_exif_sdblk(sdblk_file)
     # transform_lsc_data()
-    transf_lsc(sdblk_file, 1)
+    # transf_lsc(sdblk_file, 1)
     # transf_lsc(sdblk_file)
+    transform_lsc_data(lsc_file)

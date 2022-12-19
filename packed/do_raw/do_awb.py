@@ -1,3 +1,6 @@
+#!/usr/bin/python3
+# -*- coding: UTF-8 -*-
+#cython: language_level=3
 import numpy as np
 import os
 import exif_parser

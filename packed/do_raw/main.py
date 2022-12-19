@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
+#cython: language_level=3
 import numpy as np
 import os, shutil, time, sys
 import cv2 as cv
@@ -48,7 +49,21 @@ if __name__ == '__main__':
         print("Creation time:2022/12/17")
         print("################################################################")
     elif flag == "jinying":
-        inputunpackedraw.load_raw()
+        show_lsc_flag = False
+        inputunpackedraw.load_raw(show_lsc_flag)
+    elif flag[:-2] == "jinying":
+        if flag [-1] == "y":
+            print("################################################################")
+            print("1、不输入参数------解析：<packed_word>  <lsc>  <jpg>\n")
+            print("2、输入参数 1------增加: lsc生成raw图的结果显示\n")
+            print("################################################################")
+        elif flag [-1] == "1":
+            show_lsc_flag = True
+            print("################################################################")
+            print("输入指令1")
+            print("################################################################")
+            inputunpackedraw.load_raw(True)
+            
     else:
         print("################################################################")
         print("输入指令错误,退出程序")

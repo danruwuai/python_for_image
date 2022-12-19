@@ -1,5 +1,6 @@
-#!/usr/bin/env python
-# -*- coding:utf-8 -*-
+#!/usr/bin/python3
+# -*- coding: UTF-8 -*-
+#cython: language_level=3
 # @time: 2021/5/26 14:17
 # @File: create_pyd_file.py
 import os
@@ -13,6 +14,8 @@ def func(path):
     file_path = os.path.split(path)[1]
     os.chdir(folder_path)
     with open('setup.py', 'w') as f:
+        f.write('# -*- coding: UTF-8 -*-\n')
+        f.write('#cython: language_level=3\n')
         f.write('from setuptools import setup\n')
         f.write('from Cython.Build import cythonize\n')
         f.write('setup(\n')

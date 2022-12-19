@@ -6,6 +6,7 @@ import os
 import sys
 import cv2 as cv
 import read_packed_word as readpackedword
+import do_pure_raw
 
 
 # 获取packed_word文件列表
@@ -73,8 +74,10 @@ def input_pack_word():
         print("bayer:", packed_bayer)
         print("bit:", packed_bit)
         # 读取packed_word,raw_name
-        frame_raw, raw_name, width, yuv_flag = readpackedword.read_packed_word(file_packed_word, packed_height, packed_width,
-                                                                     packed_bayer, packed_bit)
+        frame_data, raw_name, width, yuv_flag = readpackedword.read_packed_word(
+            file_packed_word, packed_height, packed_width, packed_bit)
+        frame_raw = do_pure_raw.do_bayer_color(frame_data, packed_height, width, packed_bayer)
+        
         if raw_name == False:
             continue
         if yuv_flag == 1:

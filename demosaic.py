@@ -3,7 +3,7 @@ from multiprocessing import Process, Queue, Lock
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import signal
-import read_unpack_raw
+import read_unpack_raw as read_unpackraw
 import threading
 import queue
 
@@ -67,7 +67,7 @@ def masks_Bayer(im, pattern):
 
 
 def blinnear(img, pattern):
-    img = img.astype(np.float)
+    img = img.astype(np.float64)
     R_m, G_m, B_m = masks_Bayer(img, pattern)
 
     H_G = np.array(
@@ -102,8 +102,8 @@ def AH_gradient(img, pattern):
 
     Hg1 = Hg1.reshape(1, -1)
     Hg2 = Hg2.reshape(1, -1)
-    Hg1 = Hg1.astype(np.float)
-    Hg2 = Hg2.astype(np.float)
+    Hg1 = Hg1.astype(np.float64)
+    Hg2 = Hg2.astype(np.float64)
     return (Rm + Gm) * (np.abs(signal.convolve(X, Hg1, 'same')) + np.abs(signal.convolve(X, Hg2, 'same')))
 
 
@@ -185,6 +185,7 @@ def AH_interpolateX(img, pattern, gamma, q, lock):
     Y[:, :, 0] = R
     Y[:, :, 1] = G
     Y[:, :, 2] = B
+    print("AH_interpolate")
     try:
         lock.acquire()
         # q.put({"Yx": Y}, block=True, timeout=3)
@@ -433,7 +434,7 @@ def AH_demosaic(img, pattern, gamma=1):
     queueLock = threading.Lock()
     workQueue = queue.Queue()
     # 转换为float，便于后边计算
-    img = img.astype(np.float)
+    img = img.astype(np.float64)
     print("AH demosic start")
     imgh, imgw = img.shape
     imgs = 10
@@ -673,7 +674,7 @@ def test_AHD_demosaic():
     maxvalue = 1023
     w = 3264
     h = 2448
-    img = read_unpack_raw.read_unpack_file(file_name, h, w, bit)
+    img = read_unpackraw.read_unpack_file(file_name, h, w, bit)
     result = AHD(img, pattern)
     # result = AH_demosaic(img, pattern)
     height, width = img.shape

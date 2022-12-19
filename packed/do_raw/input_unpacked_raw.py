@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
+#cython: language_level=3
 # import cProfile
 import numpy as np
 import os, shutil
@@ -38,7 +39,7 @@ def get_packed_word_file(dir_path):
     return file_list
 
 
-def load_raw():
+def load_raw(show_lsc_flag):
     # 获取文件所在的路径
     current_working_dir = os.getcwd()
     # 路径下所有文件列表
@@ -72,7 +73,7 @@ def load_raw():
         # obj = Process(target=do_raw, args=(file_raw, raw_height, raw_width, raw_bayer, raw_bit))  # args
         # 以元组的形式给子进程func函数传位置参数
         # obj.start()  # 执行子进程对象
-        do_raw(file_raw, raw_height, raw_width, raw_bayer, raw_bit)
+        do_raw(file_raw, raw_height, raw_width, raw_bayer, raw_bit, show_lsc_flag)
 
 
 def pure_raw_isp(image, raw_height, raw_width, raw_bit, raw_bayer, raw_name, dict_awb, awb_flag):
@@ -114,7 +115,7 @@ def raw_image_show_fakecolor(image, height, width, bits):
 
 
 # 处理raw函数
-def do_raw(file_raw, raw_height, raw_width, raw_bayer, raw_bit):
+def do_raw(file_raw, raw_height, raw_width, raw_bayer, raw_bit, show_lsc_flag):
     yuv_flag = 0
     if file_raw.endswith("raw"):
         frame_data = read_unpackraw.read_unpack_file(file_raw, raw_height, raw_width, raw_bit)
@@ -143,7 +144,7 @@ def do_raw(file_raw, raw_height, raw_width, raw_bayer, raw_bit):
     obj.start()  # 执行子进程对象
     # pure_raw处理
     frame_obc_data = do_pure_raw.do_black_level_correction(frame_data, raw_bit)
-    frame_lsc_data, lsc_flag = do_sdblk.do_lsc_for_raw(frame_obc_data, raw_bayer, jpg_mask)
+    frame_lsc_data, lsc_flag = do_sdblk.do_lsc_for_raw(frame_obc_data, raw_height, raw_width, raw_bayer, jpg_mask, show_lsc_flag, raw_name)
     if not lsc_flag:
         print("################################################################")
         print("不存在对应的sdblk,不做LSC处理")

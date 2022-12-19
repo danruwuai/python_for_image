@@ -66,7 +66,14 @@ def raw_image_show_lsc(lsc_R, lsc_GR, lsc_GB, lsc_B, height, width, name):
     # 全屏显示
     plt.suptitle(name)
     manager = plt.get_current_fig_manager()
-    manager.window.showMaximized()
+    try:
+        manager.window.showMaximized()
+        print("show_MAX_screen")
+    except AttributeError:
+        manager.full_screen_toggle()
+        print("MAX_screen")
+    # manager.window.showMaximized()
+
     plt.ion()
     plt.pause(30)
     # plt.show()

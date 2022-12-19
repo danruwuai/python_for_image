@@ -9,9 +9,9 @@ def get_awb_file(dir_path, jpg_mask):
         # file_list.extend(os.path.join(root, file) for file in files if file.endswith("raw_word"))
         # 获取文件名
         for file in files:
-            if (file.endswith("jpg") and os.path.isfile(file)) and file[:19] == jpg_mask:
+            if (file.endswith("jpg") and os.path.isfile(file)) and file[:17] == jpg_mask:
                 return file, True
-            elif(file.endswith("tuning") and os.path.isfile(file)) and file[:19] == jpg_mask:
+            elif(file.endswith("tuning") and os.path.isfile(file)) and file[:17] == jpg_mask:
                 return file, True
     return False, False
 
@@ -25,7 +25,9 @@ def get_awb(jpg_mask):
     if not awb_flag:
         return False, False, False, awb_flag
 
-    dict_awb, dict_isp, dict_info = exif_parser.load_jpg_data(awb_file)
+    dict_awb, dict_isp, dict_info, exit_flag = exif_parser.load_jpg_data(awb_file)
+    if exit_flag == False:
+        return None, None, None, False
     print("AWB GAIN is ", dict_awb["AWB_TAG_GAIN_R"], dict_awb["AWB_TAG_GAIN_G"], dict_awb["AWB_TAG_GAIN_B"])
     return dict_awb, dict_isp, dict_info, awb_flag
 

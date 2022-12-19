@@ -1,3 +1,6 @@
+#!/usr/bin/python3
+# -*- coding: UTF-8 -*-
+#cython: language_level=3
 import time
 from multiprocessing import Process, Queue, Lock
 import matplotlib.pyplot as plt

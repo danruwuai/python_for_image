@@ -45,14 +45,14 @@ filter_x_start                                      =[handleAFin0/1](
 filter_x_end                                        =,
 filter_x_name                                       =Magic_num
 filter_x_remove                                     =Mode=6
-filter_y_start                                      =SCD_D: PD Tgt
-filter_y_end                                        = Cur
-filter_y_name                                       =PD_Tgt
+filter_y_start                                      =SCD_D: PD Tgt|CurPos=
+filter_y_end                                        = Cur|,
+filter_y_name                                       =PD_Tgt|CurPos
 filter_y_remove                                     =
 filter_annotate_start                               =StatusC=
 filter_annotate_end                                 =,
 filter_annotate_remove                              =
-filter_color                                        =b
+filter_color                                        =b|g
 filter_name                                         =PD
 filter_y_threshold                                  =
 filter_x_mark                                       =capture intent: 2
@@ -85,7 +85,7 @@ filter_x_start                                      =[handleAFin0/1](
 filter_x_end                                        =,
 filter_x_name                                       =Magic_num
 filter_x_remove                                     =Mode=6
-filter_y_start                                      =GYRO[|GYRO(ref,cur,stb) (
+filter_y_start                                      =GYRO[|GYRO(ref,cur,stb) (0,
 filter_y_end                                        =/|,
 filter_y_name                                       =GYRO_chg|Gyro
 filter_y_remove                                     =

@@ -1,4 +1,4 @@
-import os
+import os, sys
 from matplotlib import pyplot as plt
 import numpy as np
 from multiprocessing import Process
@@ -35,11 +35,16 @@ def load_jpg_tuning():
     # Exif 地址
     exif = current_working_dir + "/EXIF"
     # print(file_exif_list)
+    if file_exif_list:
+        if not os.path.exists('Result'):
+            os.makedirs('Result')
     # 循环查找raw的文件
     for file_exif in file_exif_list:
         print("获取的文件：", file_exif)
         exif_name = file_exif + ".exif"
-        dict_data, dict_info = import_exif_tuning(file_exif)
+        dict_data, dict_info, exit_flag = import_exif_tuning(file_exif)
+        if exit_flag == False:
+            return False
         ae_debug(dict_data["ae_value_data"], dict_info, exif, exif_name)
         if dict_info["aaa_modulecount"] == 0x70005:
             ae_debug_data(dict_data["ae_debug_value_data"], exif_name)
@@ -65,16 +70,20 @@ def load_jpg_data(file):
     # 路径下所有文件列表
     exif = current_working_dir + "/EXIF"
     print("获取的文件：", file)
+    if not os.path.exists(exif):
+        return None, None, None, False
     exif_name = file + "_awb.exif"
-    dict_data, dict_info = import_exif_tuning(file)
+    dict_data, dict_info, exit_flag = import_exif_tuning(file)
+    if exit_flag == False:
+        return None, None, None, False
 
     dict_awb = awb_debug(dict_data["awb_value_data"], dict_info, exif, exif_name)
     if dict_info["isp_modulecount"] == 0x30002:
         dict_isp = isp_debug(dict_data["isp_value_data"], dict_info, exif, exif_name)
-        return dict_awb, dict_isp, dict_info
+        return dict_awb, dict_isp, dict_info, True
     else:
         dict_p2reg = isp_p2reg_debug(dict_data["isp_p2reg_data"], dict_info, exif, exif_name)
-        return dict_awb, dict_p2reg, dict_info
+        return dict_awb, dict_p2reg, dict_info, True
 
 
 def import_exif_tuning(tuning_file_path):
@@ -82,7 +91,7 @@ def import_exif_tuning(tuning_file_path):
     dict_data = {}
 
     tuning_size = os.path.getsize(tuning_file_path)
-    print("tuning_size", tuning_size)
+    # print("tuning_size", tuning_size)
     tuning_file = np.fromfile(tuning_file_path, count=tuning_size, dtype="uint8")
     AAA_flag = False
     ISP_flag = False
@@ -90,17 +99,17 @@ def import_exif_tuning(tuning_file_path):
         if not AAA_flag and tuning_file[i] == AAA_debug[0] and tuning_file[i + 1] == \
                 AAA_debug[1] and tuning_file[i + 2] == AAA_debug[2] and tuning_file[i + 3] == AAA_debug[3]:
             AAA_size = (int(tuning_file[i + 4]) << 8) + tuning_file[i + 5]
-            print("AAA_size", AAA_size)
+            # print("AAA_size", AAA_size)
             aaa_data = tuning_file[i + 6: i + 6 + AAA_size - 2]
             AAA_flag = True
             if tuning_file[i + 6 + AAA_size - 2] == ISP_debug[0] and tuning_file[i + 6 + AAA_size - 1] == ISP_debug[1]:
                 ISP_size = (int(tuning_file[i + 6 + AAA_size]) << 8) + tuning_file[i + 6 + AAA_size + 1]
-                print("ISP_size", ISP_size)
+                # print("ISP_size", ISP_size)
                 isp_data = tuning_file[i + 6 + AAA_size + 2:i + 6 + AAA_size + ISP_size]
                 ISP_flag = True
         if not ISP_flag and tuning_file[i] == ISP_debug[0] and tuning_file[i + 1] == ISP_debug[1]:
             ISP_size = (int(tuning_file[i + 2]) << 8) + tuning_file[i + 3]
-            print("ISP_size", ISP_size)
+            # print("ISP_size", ISP_size)
             isp_data = tuning_file[i + 4:i + 4 + ISP_size - 2]
             ISP_flag = True
         if AAA_flag and ISP_flag:
@@ -110,11 +119,11 @@ def import_exif_tuning(tuning_file_path):
     else:
         dict_info["aaa_debug_keyid"] = (int(aaa_data[3]) << 24) + (int(aaa_data[2]) << 16) + (int(aaa_data[1]) << 8) + (
             int(aaa_data[0]) << 0)
-        print("AAA_DEBUG_KEYID,", '%#x' % dict_info["aaa_debug_keyid"])
+        # print("AAA_DEBUG_KEYID,", '%#x' % dict_info["aaa_debug_keyid"])
         dict_info["debug_parser_version"] = int(aaa_data[0])
         dict_info["aaa_modulecount"] = (int(aaa_data[7]) << 24) + (int(aaa_data[6]) << 16) + (int(aaa_data[5]) << 8) + (
             int(aaa_data[4]) << 0)
-        print("AAA_DEBUG_MODULE,", '%#x' % dict_info["aaa_modulecount"])
+        # print("AAA_DEBUG_MODULE,", '%#x' % dict_info["aaa_modulecount"])
         dict_info["ae_debug_info_offset"] = (int(aaa_data[11]) << 24) + (int(aaa_data[10]) << 16) + (int(
             aaa_data[9]) << 8) + (int(aaa_data[8]) << 0)
         dict_info["af_debug_info_offset"] = (int(aaa_data[15]) << 24) + (int(aaa_data[14]) << 16) + (int(
@@ -205,10 +214,10 @@ def import_exif_tuning(tuning_file_path):
     else:
         dict_info["isp_debug_keyid"] = (int(isp_data[3]) << 24) + (int(isp_data[2]) << 16) + (int(isp_data[1]) << 8) + (
             int(isp_data[0]) << 0)
-        print("ISP_DEBUG_KEYID,", '%#x' % dict_info["isp_debug_keyid"])
+        # print("ISP_DEBUG_KEYID,", '%#x' % dict_info["isp_debug_keyid"])
         dict_info["isp_modulecount"] = (int(isp_data[7]) << 24) + (int(isp_data[6]) << 16) + (int(isp_data[5]) << 8) + (
             int(isp_data[4]) << 0)
-        print("ISP_DEBUG_MODULE,", '%#x' % dict_info["isp_modulecount"])
+        # print("ISP_DEBUG_MODULE,", '%#x' % dict_info["isp_modulecount"])
         dict_info["awb_debug_info_offset"] = (int(isp_data[11]) << 24) + (int(isp_data[10]) << 16) + (int(
             isp_data[9]) << 8) + (int(isp_data[8]) << 0)
         dict_info["isp_debug_info_offset"] = (int(isp_data[15]) << 24) + (int(isp_data[14]) << 16) + (int(
@@ -235,13 +244,13 @@ def import_exif_tuning(tuning_file_path):
             isp_common_data[1]) << 8) + (int(isp_common_data[0]) << 0)
         dict_info["awb_ver"] = (int(isp_common_data[5]) << 8) + (int(isp_common_data[4]) << 0)
         dict_info["awb_sub"] = (int(isp_common_data[7]) << 8) + (int(isp_common_data[6]) << 0)
-        print(dict_info["awb_ver"], dict_info["awb_sub"])
+        # print(dict_info["awb_ver"], dict_info["awb_sub"])
 
         dict_info["isp_checksum"] = (int(isp_common_data[3 + 32]) << 24) + (int(isp_common_data[2 + 32]) << 16) + (
             int(isp_common_data[1 + 32]) << 8) + (int(isp_common_data[0 + 32]) << 0)
         dict_info["isp_ver"] = (int(isp_common_data[5 + 32]) << 8) + (int(isp_common_data[4 + 32]) << 0)
         dict_info["isp_sub"] = (int(isp_common_data[7 + 32]) << 8) + (int(isp_common_data[6 + 32]) << 0)
-        print(dict_info["isp_ver"], dict_info["isp_sub"])
+        # print(dict_info["isp_ver"], dict_info["isp_sub"])
         # 获取AWB value的值
         awb_tuning_data = isp_data[dict_info["awb_debug_info_offset"]:dict_info["isp_debug_info_offset"]]
         awb_tuning_size = dict_info["isp_debug_info_offset"] - dict_info["awb_debug_info_offset"]
@@ -314,8 +323,8 @@ def import_exif_tuning(tuning_file_path):
             dict_data["mfb_reg_data"] = cal_isp_value(mfb_reg_data_new, (dict_info["mfb_reg_TableSize"]-1)*4)
             dict_data["awb_debug_data"] = cal_isp_value(awb_debug_data, awb_debug_size)
     if not ISP_flag and not AAA_flag:
-        exit()
-    return dict_data, dict_info
+        return None, None, False
+    return dict_data, dict_info, True
 
 
 def cal_aaa_value(tuning_data, tuning_size):
@@ -330,7 +339,7 @@ def cal_aaa_value(tuning_data, tuning_size):
     value_data[value_num == 0] = 0xfffffffff
     # print(value_data)
     size = len(value_data)
-    print(size)
+    # print(size)
 
     return value_data
 
@@ -362,7 +371,9 @@ def cal_ae_data_value(tuning_data, tuning_size):
 def ae_debug(ae_value_data, dict_info, exif, exif_name):
     ae_version = exif + "/AE/AE_{}_{}_{}.h".format(dict_info["debug_parser_version"], dict_info[
         "ae_ver"], dict_info["ae_sub"])
-    # print("ae_version", ae_version)
+    print("ae_version", ae_version)
+    with open('Result/' + exif_name.split('.')[0] + '.version', "w") as version_file:
+        version_file.write('[AE] : %s\n' % (ae_version.split('/')[-1]))
     ae_tag_data = import_debug_data(ae_version)
     ae_size = len(ae_tag_data)
     ae_tag = np.array(ae_tag_data)
@@ -374,7 +385,7 @@ def ae_debug(ae_value_data, dict_info, exif, exif_name):
 
 
 def save_ae_exif(dict_ae, dict_info, exif_name):
-    with open(exif_name, "w") as ae_file:
+    with open('Result/' + exif_name, "w") as ae_file:
         ae_file.write('[AE]\n')
         i = 0
         data_5_5 = np.zeros(5 * 5).astype("uint32")
@@ -558,7 +569,7 @@ def ae_debug_data(ae_debug_data, exif_name):
         LE_R_16_12, LE_G_16_12, LE_B_16_12, LE_Y_16_12, LE_RGB_MAX_hist, LE_Y_hist, SE_Y_hist, width_num, height_num))
     obj.start()
 
-    with open(exif_name, "a") as ae_file:
+    with open('Result/' + exif_name, "a") as ae_file:
         ae_file.write('\n')
         ae_file.write('[AE_Table]\n')
         ae_file.write('<<16_12_LE_Y>>\n')
@@ -689,7 +700,7 @@ def show_ae_data_old(
 
     ax1[1][1].bar(range(len(data_hist_3)), data_hist_3, color='gray')
     ax1[1][1].set_title('Hist 3 FullY', color='gray', loc="left")  # 设置标题
-    print(data_hist_3)
+    # print(data_hist_3)
     plt.tight_layout(pad=0.5, w_pad=0.5, h_pad=2.0)
     plt.suptitle("Histogram", fontweight="bold")
     manager = plt.get_current_fig_manager()
@@ -755,7 +766,9 @@ def show_ae_data_new(
 def af_debug(af_value_data, dict_info, exif, exif_name):
     af_version = exif + "/AF/AF_{}_{}_{}.h".format(dict_info["debug_parser_version"], dict_info[
         "af_ver"], dict_info["af_sub"])
-    # print("af_version", af_version)
+    print("af_version", af_version)
+    with open('Result/' + exif_name.split('.')[0] + '.version', "a") as version_file:
+        version_file.write('[AF] : %s\n' % (af_version.split('/')[-1]))
     af_tag_data = import_debug_data(af_version)
     af_size = np.arange(len(af_tag_data)).astype("str")
     af_tag = np.array(af_tag_data)
@@ -777,7 +790,7 @@ def af_debug(af_value_data, dict_info, exif, exif_name):
 
 
 def save_af_exif(af_data, num, exif_name):
-    with open(exif_name, "a") as af_file:
+    with open('Result/' + exif_name, "a") as af_file:
         # af_file.write('\n')
         af_file.write('[AF]\n')
         flag = 0
@@ -808,7 +821,7 @@ def save_af_exif(af_data, num, exif_name):
 
 
 def save_af_new_exif(af_data, num, exif_name):
-    with open(exif_name, "a") as af_file:
+    with open('Result/' + exif_name, "a") as af_file:
         # af_file.write('\n')
         af_file.write('[AF]\n')
         flag = 0
@@ -846,7 +859,9 @@ def save_af_new_exif(af_data, num, exif_name):
 def awb_debug(awb_value_data, dict_info, exif, exif_name):
     awb_version = exif + "/AWB/AWB_{}_{}_{}.h".format(dict_info["debug_parser_version"], dict_info[
         "awb_ver"], dict_info["awb_sub"])
-    # print("awb_version", awb_version)
+    print("awb_version", awb_version)
+    with open('Result/' + exif_name.split('.')[0] + '.version', "a") as version_file:
+        version_file.write('[AWB] : %s\n' % (awb_version.split('/')[-1]))
     awb_tag_data = import_debug_data(awb_version)
     awb_size = len(awb_tag_data)
     awb_tag = np.array(awb_tag_data)
@@ -858,7 +873,7 @@ def awb_debug(awb_value_data, dict_info, exif, exif_name):
 
 
 def save_awb_exif(dict_awb, dict_info, exif_name):
-    with open(exif_name, "a") as awb_file:
+    with open('Result/' + exif_name, "a") as awb_file:
         awb_file.write('\n')
         awb_file.write('[AWB]\n')
         for key in dict_awb.keys():
@@ -873,7 +888,9 @@ def save_awb_exif(dict_awb, dict_info, exif_name):
 def shading_debug(shading_value_data, dict_info, exif, exif_name):
     shading_version = exif + "/SHADING/SHADING_{}_{}_{}.h".format(dict_info[
         "debug_parser_version"], dict_info["shading_ver"], dict_info["shading_sub"])
-    # print("shading_version", shading_version)
+    print("shading_version", shading_version)
+    with open('Result/' + exif_name.split('.')[0] + '.version', "a") as version_file:
+        version_file.write('[Shading] : %s\n' % (shading_version.split('/')[-1]))
     shading_tag_data = import_debug_data(shading_version)
     shading_size = len(shading_tag_data)
     shading_tag = np.array(shading_tag_data)
@@ -885,7 +902,7 @@ def shading_debug(shading_value_data, dict_info, exif, exif_name):
 
 
 def save_shading_exif(dict_shading, dict_info, exif_name):
-    with open(exif_name, "a") as shading_file:
+    with open('Result/' + exif_name, "a") as shading_file:
         shading_file.write('\n')
         shading_file.write('[Shading]\n')
         for key in dict_shading.keys():
@@ -898,7 +915,9 @@ def save_shading_exif(dict_shading, dict_info, exif_name):
 def flash_debug(flash_value_data, dict_info, exif, exif_name):
     flash_version = exif + "/STROBE/STROBE_{}_{}_{}.h".format(dict_info[
         "debug_parser_version"], dict_info["flash_ver"], dict_info["flash_sub"])
-    # print("flash_version", flash_version)
+    print("flash_version", flash_version)
+    with open('Result/' + exif_name.split('.')[0] + '.version', "a") as version_file:
+        version_file.write('[Strobe] : %s\n' % (flash_version.split('/')[-1]))
     flash_tag_data = import_debug_data(flash_version)
     flash_size = len(flash_tag_data)
     flash_tag = np.array(flash_tag_data)
@@ -910,7 +929,7 @@ def flash_debug(flash_value_data, dict_info, exif, exif_name):
 
 
 def save_flash_exif(dict_flash, dict_info, exif_name):
-    with open(exif_name, "a") as flash_file:
+    with open('Result/' + exif_name, "a") as flash_file:
         flash_file.write('\n')
         flash_file.write('\n')
         flash_file.write('[Strobe]\n')
@@ -924,7 +943,9 @@ def save_flash_exif(dict_flash, dict_info, exif_name):
 def isp_debug(isp_value_data, dict_info, exif, exif_name):
     isp_version = exif + "/ISP/ISP_{}_{}_{}.h".format(dict_info["debug_parser_version"], dict_info[
         "isp_ver"], dict_info["isp_sub"])
-    # print("isp_version", isp_version)
+    print("isp_version", isp_version)
+    with open('Result/' + exif_name.split('.')[0] + '.version', "a") as version_file:
+        version_file.write('[ISP] : %s\n' % (isp_version.split('/')[-1]))
     isp_tag_data = import_debug_data(isp_version)
     isp_size = len(isp_tag_data)
     isp_tag = np.array(isp_tag_data)
@@ -936,7 +957,7 @@ def isp_debug(isp_value_data, dict_info, exif, exif_name):
 
 
 def save_isp_exif(dict_isp, dict_info, exif_name):
-    with open(exif_name, "a") as isp_file:
+    with open('Result/' + exif_name, "a") as isp_file:
         isp_file.write('\n')
         isp_file.write('\n')
         isp_file.write('[ISP]\n')
@@ -961,7 +982,7 @@ def isp_p1reg_debug(p1_reg_data, dict_info, exif, exif_name):
             break
 
     isp_version = exif + "/ISP/ISP_HW_REG/{}/isp_reg_p1.json".format(dict_info["isp_p1reg_version"])
-    # print("isp_version", isp_version)
+    print("isp_version", isp_version)
     if os.path.isfile(isp_version):
         pass
     else:
@@ -977,7 +998,7 @@ def isp_p1reg_debug(p1_reg_data, dict_info, exif, exif_name):
 
 
 def save_p1reg_exif(dict_p1reg, dict_info, reg_tag_data, reg_size, exif_name):
-    with open(exif_name, "a") as p1reg_file:
+    with open('Result/' + exif_name, "a") as p1reg_file:
         p1reg_file.write('[ISP_HW_P1]\n')
         for i in range(reg_size):
             if "_no_exist" in reg_tag_data[i, 0, 0]:
@@ -1006,7 +1027,7 @@ def isp_p2reg_debug(p2_reg_data, dict_info, exif, exif_name):
         if flag == 1:
             break
     isp_version = exif + "/ISP/ISP_HW_REG/{}/isp_reg_p2.json".format(dict_info["isp_p2reg_version"])
-    # print("isp_version", isp_version)
+    print("isp_version", isp_version)
     if os.path.isfile(isp_version):
         pass
     else:
@@ -1022,7 +1043,7 @@ def isp_p2reg_debug(p2_reg_data, dict_info, exif, exif_name):
 
 
 def save_p2reg_exif(dict_p2reg, dict_info, reg_tag_data, reg_size, exif_name):
-    with open(exif_name, "a") as p2reg_file:
+    with open('Result/' + exif_name, "a") as p2reg_file:
         p2reg_file.write('[ISP_HW_P2]\n')
         for i in range(reg_size):
             if "_no_exist" in reg_tag_data[i, 0, 0]:
@@ -1062,7 +1083,7 @@ def mfb_reg_debug(mfb_reg_data, dict_info, exif, exif_name):
 
 
 def save_mfb_reg_exif(dict_mfb_reg, dict_info, reg_tag_data, reg_size, exif_name):
-    with open(exif_name, "a") as mfb_reg_file:
+    with open('Result/' + exif_name, "a") as mfb_reg_file:
         mfb_reg_file.write('[ISP_HW_MFB]\n')
         for i in range(reg_size):
             if "_no_exist" in reg_tag_data[i, 0, 0]:
@@ -1416,7 +1437,7 @@ def import_reg_data(debug_file_path, table_size):
             line = line.replace(",", "\n")
             data_all = line.split("\n")
             data_all = data_all[0].split("    ")
-            print(data_all)
+            # print(data_all)
             if data_all[0] != "":
                 continue
             if data_all[1] == "]":
@@ -1464,7 +1485,7 @@ def import_debug_data(debug_file_path):
     with open(debug_file_path, "r") as debug_file:
         for line in debug_file:
             line = line.lstrip()
-            print(line)
+            # print(line)
             if "typedef" in line:
                 continue
             elif "enum" in line:
@@ -1487,7 +1508,7 @@ def import_debug_data(debug_file_path):
                 tag_data.append(data[0])
     # print(tag_data)
     size = len(tag_data)
-    print(size)
+    # print(size)
     return tag_data
 
 

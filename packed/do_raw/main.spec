@@ -6,7 +6,8 @@ block_cipher = None
 
 a = Analysis(
     ['main.py'],
-    pathex=['C:\\Users\\danru\\work\\project\\workspace\\image\\python_for_image\\packed\\do_raw'],
+    #pathex=['C:\\Users\\danru\\work\\project\\workspace\\image\\python_for_image\\packed\\do_raw'],
+    pathex=['D:\\workspace\\python\\packed\\do_raw'],
     binaries=[],
     datas=[],
     hiddenimports=[],

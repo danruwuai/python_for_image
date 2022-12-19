@@ -11,7 +11,7 @@ import do_pure_raw
 
 
 # 读取packed_word信息，返回数据和raw_name,准确的width
-def read_packed_word(file_path_name, height, width, bayer, bit):
+def read_packed_word(file_path_name, height, width, bit):
     yuv_flag = 0
     if bit == 12:
         frame_out = read_packed_word_12(file_path_name, height, width)
@@ -134,6 +134,7 @@ def read_packed_word(file_path_name, height, width, bayer, bit):
     frame_raw = frame_raw.astype('uint8')
     # 写入raw文件
     frame_raw.tofile(raw_name + ".raw")
+    """
     # 根据bayer转换raw
     rgb_img = np.zeros(shape=(height, width, 3))
     R = rgb_img[:, :, 0]
@@ -165,6 +166,8 @@ def read_packed_word(file_path_name, height, width, bayer, bit):
         print("no match bayer")
         return frame_out, raw_name, width, yuv_flag
     return rgb_img, raw_name, width, yuv_flag
+    """
+    return frame_out, raw_name, width, yuv_flag
 
 
 # 读取lsc_raw信息，返回数据和raw_name
