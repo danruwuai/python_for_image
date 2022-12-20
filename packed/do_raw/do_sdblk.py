@@ -575,7 +575,7 @@ def do_lsc_for_raw(image, height, width, bayer, sdblk_mask, show_lsc_flag, name)
         obj = Process(target=raw_image_show.raw_image_show_raw, args=(
             R, GR, GB, B, height // 2, width // 2,
             name + '_no_lsc'))  # args以元组的形式给子进程func函数传位置参数
-    obj.start()
+        obj.start()
 
 
     R_new = R * shading_R

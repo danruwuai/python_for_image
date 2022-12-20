@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
+#cython: language_level=3
 import time
 import math
 import os
@@ -534,7 +535,7 @@ def lsc_to_csv(image, name):
     print("输出raw统计数据:", f'{name}.csv')
 
 
-def do_lsc_for_raw(image, bayer, sdblk_mask):
+def do_lsc_for_raw(image, height, width, bayer, sdblk_mask, show_lsc_flag, name):
     # 获取文件所在的路径
     current_working_dir = os.getcwd()
     # 路径下对应sdblk文件
@@ -546,6 +547,7 @@ def do_lsc_for_raw(image, bayer, sdblk_mask):
             return image, False
         transform_lsc_data(lsc_file_path)
         sdblk_file = os.path.splitext(lsc_file_path)[0] + ".sdblk"
+    print("Sdblk 文件：",sdblk_file)
     R, GR, GB, B = do_pure_raw.bayer_channel_separation(image, bayer)
     # HH, HW = R.shape
     # block_size = 16
@@ -569,12 +571,24 @@ def do_lsc_for_raw(image, bayer, sdblk_mask):
     GB_new = GB * GB_gain_map
     B_new = B * B_gain_map
     """
+    if show_lsc_flag:
+        obj = Process(target=raw_image_show.raw_image_show_raw, args=(
+            R, GR, GB, B, height // 2, width // 2,
+            name + '_no_lsc'))  # args以元组的形式给子进程func函数传位置参数
+        obj.start()
+
 
     R_new = R * shading_R
     GR_new = GR * shading_GR
     GB_new = GB * shading_GB
     B_new = B * shading_B
 
+    if show_lsc_flag:
+        obj = Process(target=raw_image_show.raw_image_show_raw, args=(
+            R_new, GR_new, GB_new, B_new, height // 2, width // 2,
+            name + '_lsc'))  # args以元组的形式给子进程func函数传位置参数
+        obj.start()
+    
     new_image = do_pure_raw.bayer_channel_integrration(R_new, GR_new, GB_new, B_new, bayer)
     # new_image = np.clip(new_image, a_min=0, a_max=1023)
     new_image = new_image.astype(np.uint16)

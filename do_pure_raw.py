@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
+#cython: language_level=3
 # from pickle import FALSE
 import numpy as np
 from matplotlib import pyplot as plt

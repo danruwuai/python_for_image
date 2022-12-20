@@ -1,3 +1,6 @@
+#!/usr/bin/python3
+# -*- coding: UTF-8 -*-
+#cython: language_level=3
 import numpy as np
 import os
 import exif_parser
@@ -23,20 +26,27 @@ def get_awb(jpg_mask):
     awb_file, awb_flag = get_awb_file(current_working_dir, jpg_mask)
 
     if not awb_flag:
-        return False, False, False, awb_flag
+        return False, False, awb_flag
 
-    dict_awb, dict_isp, dict_info, exit_flag = exif_parser.load_jpg_data(awb_file)
+    dict_isp, dict_info, exit_flag = exif_parser.load_jpg_data(awb_file)
     if exit_flag == False:
-        return None, None, None, False
-    print("AWB GAIN is ", dict_awb["AWB_TAG_GAIN_R"], dict_awb["AWB_TAG_GAIN_G"], dict_awb["AWB_TAG_GAIN_B"])
-    return dict_awb, dict_isp, dict_info, awb_flag
+        return None, None, False
+    print("AWB GAIN is ", dict_isp["AWB_INFO_GAIN_R"], dict_isp["AWB_INFO_GAIN_G"], dict_isp["AWB_INFO_GAIN_B"])
+
+    return dict_isp, dict_info, awb_flag
 
 
-def do_awb(image, dict_awb):
-    image[:, :, 0] = image[:, :, 0] * dict_awb["AWB_TAG_GAIN_R"] / 512
-    image[:, :, 1] = image[:, :, 1] * dict_awb["AWB_TAG_GAIN_G"] / 512
-    image[:, :, 2] = image[:, :, 2] * dict_awb["AWB_TAG_GAIN_B"] / 512
-    
+def do_awb(image, dict_isp, dict_info):
+    if dict_info["isp_modulecount"] == 0x30002:
+        image[:, :, 0] = image[:, :, 0] * dict_isp["AWB_INFO_GAIN_R"] / 512
+        image[:, :, 1] = image[:, :, 1] * dict_isp["AWB_INFO_GAIN_G"] / 512
+        image[:, :, 2] = image[:, :, 2] * dict_isp["AWB_INFO_GAIN_B"] / 512
+        print("AWB GAIN is ", dict_isp["AWB_INFO_GAIN_R"], dict_isp["AWB_INFO_GAIN_G"], dict_isp["AWB_INFO_GAIN_B"])
+    else:
+        image[:, :, 0] = image[:, :, 0] * dict_isp["AWB_INFO_CURRENT_GAIN_R_P2"] / 512
+        image[:, :, 1] = image[:, :, 1] * dict_isp["AWB_INFO_CURRENT_GAIN_G_P2"] / 512
+        image[:, :, 2] = image[:, :, 2] * dict_isp["AWB_INFO_CURRENT_GAIN_B_P2"] / 512
+        print("AWB GAIN is ", dict_isp["AWB_INFO_CURRENT_GAIN_R_P2"], dict_isp["AWB_INFO_CURRENT_GAIN_G_P2"], dict_isp["AWB_INFO_CURRENT_GAIN_B_P2"])
     image = image.astype(np.uint16)
     return image
 

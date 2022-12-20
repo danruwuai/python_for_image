@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
+#cython: language_level=3
 
 import raw_image_show as rawshow
 import numpy as np

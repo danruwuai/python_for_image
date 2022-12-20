@@ -215,7 +215,11 @@ def do_log_show(file_log, dict_filter, file_name):
         for line in log_file:
             if re.search(dict_filter["filter_count_start"], line):
                 if dict_filter["filter_count_remove"] == "":
-                    count = int(re.findall(f'{dict_filter["filter_count_start"]}('
+                    if dict_filter["filter_count_end"] == "count_end":
+                        count = int(re.findall(f'{dict_filter["filter_count_start"]}('
+                                            f'.*?)\n', line)[0])
+                    else:
+                        count = int(re.findall(f'{dict_filter["filter_count_start"]}('
                                             f'.*?){dict_filter["filter_count_end"]}', line)[0])
                     if pre_count < count:
                         pre_count = count
@@ -240,7 +244,11 @@ def do_log_show(file_log, dict_filter, file_name):
                 elif re.search(dict_filter["filter_count_remove"], line):
                     pass
                 else:
-                    count = int(re.findall(f'{dict_filter["filter_count_start"]}('
+                    if dict_filter["filter_count_end"] == "count_end":
+                        count = int(re.findall(f'{dict_filter["filter_count_start"]}('
+                                            f'.*?)\n', line)[0])
+                    else:
+                        count = int(re.findall(f'{dict_filter["filter_count_start"]}('
                                             f'.*?){dict_filter["filter_count_end"]}', line)[0])
                     if pre_count < count:
                         pre_count = count
@@ -263,7 +271,11 @@ def do_log_show(file_log, dict_filter, file_name):
                         x_mark.clear()
             if re.search(dict_filter["filter_x_start"], line):
                 if dict_filter["filter_x_remove"] == "":
-                    x_data = re.findall(f'{dict_filter["filter_x_start"]}('
+                    if dict_filter["filter_x_end"] == "x_end":
+                        x_data = re.findall(f'{dict_filter["filter_x_start"]}('
+                                            f'.*?)\n', line)[0]
+                    else:
+                        x_data = re.findall(f'{dict_filter["filter_x_start"]}('
                                             f'.*?){dict_filter["filter_x_end"]}', line)[0]
                     for i in range(y_num):
                         if len(x[i]) == len(y[i]):
@@ -278,7 +290,12 @@ def do_log_show(file_log, dict_filter, file_name):
                 elif re.search(dict_filter["filter_x_remove"], line):
                     pass
                 else:
-                    x_data = re.findall(f'{dict_filter["filter_x_start"]}(.*?){dict_filter["filter_x_end"]}', line)[0]
+                    if dict_filter["filter_x_end"] == "x_end":
+                        x_data = re.findall(f'{dict_filter["filter_x_start"]}('
+                                            f'.*?)\n', line)[0]
+                    else:
+                        x_data = re.findall(f'{dict_filter["filter_x_start"]}('
+                                            f'.*?){dict_filter["filter_x_end"]}', line)[0]
                     for i in range(y_num):
                         if len(x[i]) == len(y[i]):
                             x[i].append(x_data)
@@ -294,18 +311,32 @@ def do_log_show(file_log, dict_filter, file_name):
                 if re.search(y_count["start" + "_" + str(i)], line):
                     if y_count["remove" + "_" + str(i)] == "":
                         if len(x[i]) == len(y[i]) + 1:
-                            y[i].append(re.findall(f'{y_count["start" + "_" + str(i)]}('
+                            if y_count["end" + "_" + str(i)] == "end":
+                                y[i].append(re.findall(f'{y_count["start" + "_" + str(i)]}('
+                                                f'.*?)\n', line)[0])
+                            else:
+                                y[i].append(re.findall(f'{y_count["start" + "_" + str(i)]}('
                                                 f'.*?){y_count["end" + "_" + str(i)]}', line)[0])
                     elif re.search(y_count["remove" + "_" + str(i)], line):
                         pass
                     elif len(x[i]) == len(y[i]) + 1:
-                        y[i].append(re.findall(f'{y_count["start" + "_" + str(i)]}(.*?){y_count["end" + "_" + str(i)]}', line)[0])
+                        if y_count["end" + "_" + str(i)] == "end":
+                                y[i].append(re.findall(f'{y_count["start" + "_" + str(i)]}('
+                                                f'.*?)\n', line)[0])
+                        else:
+                            y[i].append(re.findall(f'{y_count["start" + "_" + str(i)]}('
+                                                f'.*?){y_count["end" + "_" + str(i)]}', line)[0])
 
             if re.search(dict_filter["filter_annotate_start"], line):
                 if dict_filter["filter_annotate_remove"] == "":
                     for i in range(y_num):
                         if len(x[i]) == len(annotate[i]) + 1:
-                            annotate[i].append(re.findall(
+                            if dict_filter["filter_annotate_end"] == "ammptate_end":
+                                annotate[i].append(re.findall(
+                                f'{dict_filter["filter_annotate_start"]}('
+                                f'.*?)\n', line)[0])
+                            else:
+                                annotate[i].append(re.findall(
                                 f'{dict_filter["filter_annotate_start"]}('
                                 f'.*?){dict_filter["filter_annotate_end"]}', line)[0])
                 elif re.search(dict_filter["filter_annotate_remove"], line):
@@ -313,7 +344,12 @@ def do_log_show(file_log, dict_filter, file_name):
                 else:
                     for i in range(y_num):
                         if len(x[i]) == len(annotate[i]) + 1:
-                            annotate[i].append(re.findall(
+                            if dict_filter["filter_annotate_end"] == "ammptate_end":
+                                annotate[i].append(re.findall(
+                                f'{dict_filter["filter_annotate_start"]}('
+                                f'.*?)\n', line)[0])
+                            else:
+                                annotate[i].append(re.findall(
                                 f'{dict_filter["filter_annotate_start"]}('
                                 f'.*?){dict_filter["filter_annotate_end"]}', line)[0])
                     
@@ -450,8 +486,7 @@ def show_data(x, y, annotate, y_num, x_mark, dict_filter, file_name):
                     indmax = copy.deepcopy(data_ind) + 1
                 elif flag_bound:
                     indmax = indmax + 1
-                else:
-                    indmax = indmax - 1
+
                 print(indmin,indmax,"##########")
             if Pre_None_flag == 1:
                 region_y_min = y[Pre_None_flag + None_flag - 1][indmin]

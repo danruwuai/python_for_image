@@ -76,7 +76,7 @@ def load_raw(show_lsc_flag):
         do_raw(file_raw, raw_height, raw_width, raw_bayer, raw_bit, show_lsc_flag)
 
 
-def pure_raw_isp(image, raw_height, raw_width, raw_bit, raw_bayer, raw_name, dict_awb, awb_flag):
+def pure_raw_isp(image, raw_height, raw_width, raw_bit, raw_bayer, raw_name, dict_isp, awb_flag, dict_info):
     if 0:
         # 输出csv数据
         do_pure_raw.raw_to_csv(image, raw_height, raw_width, raw_bayer, raw_name)
@@ -97,7 +97,7 @@ def pure_raw_isp(image, raw_height, raw_width, raw_bit, raw_bayer, raw_name, dic
         pure_gtm_data = do_gtm.do_ggm(frame_cfa_rgb, raw_bit)
     else:
         # AWB处理
-        pure_awb_data = do_awb.do_awb(frame_cfa_rgb, dict_awb)
+        pure_awb_data = do_awb.do_awb(frame_cfa_rgb, dict_isp, dict_info)
         save_bmp(pure_awb_data, raw_bit, 'Result/' + raw_name + '_pure_awb')
         pure_gtm_data = do_gtm.do_ggm(pure_awb_data, raw_bit)
     save_bmp(pure_gtm_data, raw_bit, 'Result/' + raw_name + '_pure_ggm')
@@ -134,11 +134,11 @@ def do_raw(file_raw, raw_height, raw_width, raw_bayer, raw_bit, show_lsc_flag):
     # 获取raw图前面mask信息
     jpg_mask = raw_name[:17]
     print("jpg_mask:", jpg_mask)
-    dict_awb, dict_isp, dict_info, awb_flag = do_awb.get_awb(jpg_mask)
+    dict_isp, dict_info, awb_flag = do_awb.get_awb(jpg_mask)
     # pure_raw_isp 子进程进入
     # args以元组的形式给子进程func函数传位置参数
     obj = Process(target=pure_raw_isp, args=(
-        frame_data, raw_height, raw_width, raw_bit, raw_bayer, raw_name, dict_awb, awb_flag))
+        frame_data, raw_height, raw_width, raw_bit, raw_bayer, raw_name, dict_isp, awb_flag, dict_info))
     # kwargs以字典的形式给子进程func函数传关键字参数
     # kwargs={'name': '小杨', 'age': 18}
     obj.start()  # 执行子进程对象
@@ -163,7 +163,7 @@ def do_raw(file_raw, raw_height, raw_width, raw_bayer, raw_bit, show_lsc_flag):
             gtm_data = do_gtm.do_ggm(frame_cfa_rgb, raw_bit)
         else:
             # AWB处理
-            awb_data = do_awb.do_awb(frame_cfa_rgb, dict_awb)
+            awb_data = do_awb.do_awb(frame_cfa_rgb, dict_isp, dict_info)
             save_bmp(awb_data, raw_bit, 'Result/' + raw_name + '_proc_awb')
             print("################################################################")
             # CCM处理

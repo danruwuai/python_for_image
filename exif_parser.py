@@ -1,3 +1,6 @@
+#!/usr/bin/python3
+# -*- coding: UTF-8 -*-
+#cython: language_level=3
 import os, sys
 from matplotlib import pyplot as plt
 import numpy as np
@@ -72,18 +75,18 @@ def load_jpg_data(file):
     print("获取的文件：", file)
     if not os.path.exists(exif):
         return None, None, None, False
-    exif_name = file + "_awb.exif"
+    exif_name = file + "_isp.exif"
     dict_data, dict_info, exit_flag = import_exif_tuning(file)
     if exit_flag == False:
-        return None, None, None, False
+        return None, None, False
 
-    dict_awb = awb_debug(dict_data["awb_value_data"], dict_info, exif, exif_name)
+    # dict_awb = awb_debug(dict_data["awb_value_data"], dict_info, exif, exif_name)
     if dict_info["isp_modulecount"] == 0x30002:
         dict_isp = isp_debug(dict_data["isp_value_data"], dict_info, exif, exif_name)
-        return dict_awb, dict_isp, dict_info, True
+        return dict_isp, dict_info, True
     else:
         dict_p2reg = isp_p2reg_debug(dict_data["isp_p2reg_data"], dict_info, exif, exif_name)
-        return dict_awb, dict_p2reg, dict_info, True
+        return dict_p2reg, dict_info, True
 
 
 def import_exif_tuning(tuning_file_path):
