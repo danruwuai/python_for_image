@@ -123,6 +123,9 @@ def do_raw(file_raw, raw_height, raw_width, raw_bayer, raw_bit, show_lsc_flag):
     elif file_raw.endswith('.packed_word'):
         frame_data, raw_name, width, yuv_flag = readpackedword.read_packed_word(
             file_raw, raw_height, raw_width, raw_bit)
+        # packed_word转12bit raw，需要更新bit位
+        if raw_bit == 10:
+            raw_bit = 12
     else:
         return False
     # image = frame_data / 4095.
