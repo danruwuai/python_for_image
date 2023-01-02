@@ -3,11 +3,17 @@ import cv2 as cv
 import numpy as np
 
 
+
 # region 辅助函数
 # RGB2XYZ空间的系数矩阵
+"""
 M = np.array([[0.412453, 0.357580, 0.180423],
               [0.212671, 0.715160, 0.072169],
               [0.019334, 0.119193, 0.950227]])
+"""
+M = np.array([[0.433910, 0.376220, 0.189860],
+              [0.212649, 0.715169, 0.072182],
+              [0.017756, 0.109478, 0.872915]])
 
 
 def show_24_color(image_file):
@@ -57,7 +63,11 @@ def save_24_color_data(image, pt1, pt2):
         color_data[i,0,2] =image[pt1[i][1]:pt2[i][1],pt1[i][0]:pt2[i][0],0].mean()
         color_data[i,0,1] =image[pt1[i][1]:pt2[i][1],pt1[i][0]:pt2[i][0],1].mean()
         color_data[i,0,0] =image[pt1[i][1]:pt2[i][1],pt1[i][0]:pt2[i][0],2].mean()
-    print(color_data/255)
+    if color_data.max() > 1:
+        print(color_data/255)
+    else:
+        print(color_data)
+        color_data = color_data * 255
 
     lab_data = RGB2Lab(color_data)
     print(lab_data)
@@ -110,6 +120,8 @@ def labf(t):
 # 像素值RGB转XYZ空间，pixel格式:(B,G,R)
 # 返回XYZ空间下的值
 def __rgb2xyz__(rgb):
+    rgb = degamma_srgb(rgb, clip_range=[0, 255])
+    rgb = rgb / 255.0
     h, w, c = rgb.shape
     R = rgb[:, :, 0]
     G = rgb[:, :, 1]
@@ -121,11 +133,12 @@ def __rgb2xyz__(rgb):
     planed_image[0, :] = planed_R
     planed_image[1, :] = planed_G
     planed_image[2, :] = planed_B
-    # rgb = rgb / 255.0
+
     # RGB = np.array([gamma(c) for c in rgb])
     XYZ = np.dot(M, planed_image)
-    XYZ = XYZ / 255.0
+    #XYZ = XYZ / 255.0
     return (XYZ[0] / 0.95047, XYZ[1] / 1.0, XYZ[2] / 1.08883), h*w
+    #return (XYZ[0], XYZ[1], XYZ[2]), h * w
 
 def __xyz2lab__(xyz, size):
     """
@@ -134,6 +147,7 @@ def __xyz2lab__(xyz, size):
     :return: 返回Lab空间下的值
     """
     F_XYZ = np.zeros(shape=(3, size))
+    LAB = np.zeros(shape=(size,1,3))
     F_XYZ[0] = [f(x) for x in xyz[0]]
     F_XYZ[1] = [f(x) for x in xyz[1]]
     F_XYZ[2] = [f(x) for x in xyz[2]]
@@ -142,7 +156,12 @@ def __xyz2lab__(xyz, size):
         L[i] = 116 * F_XYZ[1,i] - 16 if xyz[1][i] > 0.008856 else 903.3 * xyz[1][i]
     a = 500 * (F_XYZ[0,] - F_XYZ[1,])
     b = 200 * (F_XYZ[1,] - F_XYZ[2,])
-    return (L, a, b)
+    print(L.shape, LAB[:,:,0].shape)
+    LAB[:,:,0] = L.reshape(size,1)
+    LAB[:,:,1] = a.reshape(size,1)
+    LAB[:,:,2] = b.reshape(size,1)
+
+    return LAB
 
 
 def RGB2Lab(image):
@@ -158,6 +177,34 @@ def RGB2Lab(image):
 # im_channel取值范围：[0,1]
 def f(im_channel):
     return np.power(im_channel, 1 / 3) if im_channel > 0.008856 else 7.787 * im_channel + 0.137931
+
+
+def degamma_srgb(data, clip_range=[0, 255]):
+    # bring data in range 0 to 1
+    data = np.clip(data, clip_range[0], clip_range[1])
+    data = np.divide(data, clip_range[1])
+
+    data = np.asarray(data)
+    mask = data > 0.04045
+
+    # basically, if data[x, y, c] > 0.04045, data[x, y, c] = ( (data[x, y, c] + 0.055) / 1.055 ) ^ 2.4
+    #            else, data[x, y, c] = data[x, y, c] / 12.92
+    data[mask] += 0.055
+    data[mask] /= 1.055
+    data[mask] **= 2.4
+
+    data[np.invert(mask)] /= 12.92
+
+    #data_show = data.copy()
+    #np.clip(data_show * clip_range[1], clip_range[0], clip_range[1])
+    # gbr = rgb[...,[2,0,1]]
+    # data_show = data_show[..., ::-1]
+    #data_show = data_show[..., [2,1,0]]
+    #cv.imshow("data", data_show)
+    #cv.waitKey(0)
+
+    # rescale
+    return np.clip(data * clip_range[1], clip_range[0], clip_range[1])
 
 
 if __name__ == '__main__':
