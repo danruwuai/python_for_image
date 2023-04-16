@@ -229,6 +229,71 @@ def read_lsc_raw(file_path_name, height, width, bayer):
     return rgb_img, raw_name
 
 
+def read_lsc_raw_22(file_path_name, height, width, bayer):
+
+    image_bytes = width * height  # 获取图片真实的大小
+    frame = np.fromfile(file_path_name, count=image_bytes, dtype="uint32")
+    print("b shape", frame.shape)
+    print('%#x' % frame[0])
+    frame.shape = [height, width]  # 高字节整理图像矩阵
+    frame = np.clip(frame, 0, 65535)
+    frame = frame.astype('uint16')
+    # 替换16 bit为12 bit
+    raw_name = file_path_name[:-4]
+    raw_name = raw_name.replace('_22_', '_14_')
+    """
+    raw_byte = frame
+    # 转换为8bit,输出对应raw数据
+    frame_raw_low = np.uint8(raw_byte)  # 低8位获取
+    raw_byte = raw_byte.astype('uint16')
+    raw_byte = np.right_shift(raw_byte, 8)
+    frame_raw_high = raw_byte  # 高8位获取
+    frame_raw = np.zeros(shape=(height, width))
+    frame_raw[:, 0:width:2] = frame_raw_low
+    frame_raw[:, 1:width:2] = frame_raw_high
+    frame_raw = frame_raw.astype('uint8')
+    """
+    # 写入raw文件
+    frame.tofile(raw_name + ".raw")
+    # 根据bayer转换raw
+    rgb_img = np.zeros(shape=(height, width, 3))
+    R = rgb_img[:, :, 0]
+    GR = rgb_img[:, :, 1]
+    GB = rgb_img[:, :, 1]
+    B = rgb_img[:, :, 2]
+    # 0:B 1:GB 2:GR 3:R
+    if bayer == 3:
+        R[::2, ::2] = frame[::2, ::2]
+        GR[::2, 1::2] = frame[::2, 1::2]
+        GB[1::2, ::2] = frame[1::2, ::2]
+        B[1::2, 1::2] = frame[1::2, 1::2]
+    elif bayer == 2:
+        GR[::2, ::2] = frame[::2, ::2]
+        R[::2, 1::2] = frame[::2, 1::2]
+        B[1::2, ::2] = frame[1::2, ::2]
+        GB[1::2, 1::2] = frame[1::2, 1::2]
+    elif bayer == 1:
+        GB[::2, ::2] = frame[::2, ::2]
+        B[::2, 1::2] = frame[::2, 1::2]
+        R[1::2, ::2] = frame[1::2, ::2]
+        GR[1::2, 1::2] = frame[1::2, 1::2]
+    elif bayer == 0:
+        B[::2, ::2] = frame[::2, ::2]
+        GB[::2, 1::2] = frame[::2, 1::2]
+        GR[1::2, ::2] = frame[1::2, ::2]
+        R[1::2, 1::2] = frame[1::2, 1::2]
+    else:
+        print("no match bayer")
+        return frame, raw_name
+    """
+    np.savetxt('R.csv', R, delimiter=",", fmt='%s')
+    np.savetxt('GR.csv', GR, delimiter=",", fmt='%s')
+    np.savetxt('GB.csv', GB, delimiter=",", fmt='%s')
+    np.savetxt('B.csv', B, delimiter=",", fmt='%s')
+    """
+    return rgb_img, raw_name
+
+
 # get_width_real获取数据，同时输出可能的width_real
 def get_width_real(file_path_name, height, width):
     # 获取文件大小

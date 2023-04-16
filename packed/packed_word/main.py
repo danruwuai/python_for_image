@@ -58,12 +58,14 @@ if __name__ == '__main__':
             aao.load_aao(csv_flag)
             input_packed_word.input_pack_word()
             input_packed_word.input_lsc_raw()
+            input_packed_word.input_lsc_raw_22()
             input_packed_word.input_pack_word_s0()
         else:
             csv_flag = 0
             aao.load_aao(csv_flag)
             input_packed_word.input_pack_word()
             input_packed_word.input_lsc_raw()
+            input_packed_word.input_lsc_raw_22()
             input_packed_word.input_pack_word_s0()
     else:
         print("################################################################")

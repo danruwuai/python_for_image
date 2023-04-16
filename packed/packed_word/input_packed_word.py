@@ -42,6 +42,17 @@ def get_lsc_raw_file(dir_path):
     return file_list_lsc
 
 
+def get_lsc_raw_22_file(dir_path):
+    file_list_lsc = []
+    for root, dirs, files in os.walk(dir_path):  # 遍历所有子目录
+        # 获取完整路径
+        # file_list.extend(os.path.join(root, file) for file in files if file.endswith("packed_word"))
+        # 获取文件名
+        file_list_lsc.extend(os.path.join("", file) for file in files if (file.endswith(".raw") and "_LSC_" in file and "_22_" in file and os.path.isfile(file)))
+
+    return file_list_lsc
+
+
 def input_pack_word():
     print("################################################################")
     print("Design by Zhong")
@@ -115,6 +126,43 @@ def input_lsc_raw():
         frame_raw, raw_name = readpackedword.read_lsc_raw(file_lsc_raw, packed_height, packed_width,
                                                                      packed_bayer)
         frame_raw = frame_raw / 16
+        # 由于16bit转12bit，会有超出255的值。
+        frame_raw = np.clip(frame_raw, 0, 255)
+        # cv.imwrite(f'{raw_name}bmp', frame_raw)
+        # imwrite默认输出的是BGR图片，所以需要RGB转换未BGR再输出。
+
+        frame_raw = frame_raw.astype(np.uint8)
+        cv.imwrite(raw_name + '.bmp', cv.cvtColor(frame_raw, cv.COLOR_RGBA2BGRA))
+        print("################################################################")
+
+
+def input_lsc_raw_22():
+    # 获取文件所在的路径
+    current_working_dir = os.getcwd()
+    # 路径下所有文件列表
+    # 处理LCS文件
+    file_lsc_raw_list = get_lsc_raw_22_file(current_working_dir)
+    for file_lsc_raw in file_lsc_raw_list:
+        print("获取的文件：", file_lsc_raw)
+        # 获取packed_word对应的信息
+        packed_info = file_lsc_raw[file_lsc_raw.find('__'):file_lsc_raw.find('.') + 1]
+        packed_height = packed_info[packed_info.find('x') + 1:packed_info.find('_22_')]
+        packed_width = packed_info[packed_info.find('__') + 2:packed_info.find('x')]
+        packed_bayer = packed_info[packed_info.find('_22_') + 4:packed_info.find('_LSC_') - 1]
+        packed_bit = 14
+        # 字符串转int
+        packed_height = int(packed_height)
+        packed_width = int(packed_width)
+        packed_bayer = int(packed_bayer)
+        packed_bit = packed_bit
+        print("width:", packed_width)
+        print("height:", packed_height)
+        print("bayer:", packed_bayer)
+        print("bit:", packed_bit)
+        # 读取raw,raw_name
+        frame_raw, raw_name = readpackedword.read_lsc_raw_22(file_lsc_raw, packed_height, packed_width,
+                                                                     packed_bayer)
+        frame_raw = frame_raw / 64
         # 由于16bit转12bit，会有超出255的值。
         frame_raw = np.clip(frame_raw, 0, 255)
         # cv.imwrite(f'{raw_name}bmp', frame_raw)
